@@ -1,5 +1,6 @@
-<sequence> ::= <nucleotide>+
+<sequence> ::= <nucleotide> | <nucleotide> <sequence>
 <nucleotide> ::= "A" | "T" | "C" | "G"
+
 
 
 <concatenate> ::= "concat" <sequence> <sequence>
