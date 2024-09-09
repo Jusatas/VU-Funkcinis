@@ -1,0 +1,8 @@
+<sequence> ::= <nucleotide>+
+<nucleotide> ::= "A" | "T" | "C" | "G"
+
+
+<concatenate> ::= "concat" <sequence> <sequence>
+<find-motif> ::= "fmotif" <sequence> <sequence>
+<complement> ::= "complement" <sequence>
+<transcribe> ::= "transcribe" <sequence>
