@@ -1,24 +1,30 @@
 # Genome Sequence REPL
-### fp-2024.  Justas Drakšas, group 5.
 
-All living entities posses genetic information which determines most traits and characteristics\
- of an organism. Nucleotides are the buildings blocks of DNA and RNA and by analysing sequences\
-  of them we can gain understand the genetic code. This REPL program helps with such tasks.
+All living entities possess genetic information which determines most traits and\
+characteristics of an organism. Nucleotides are the building blocks of DNA and\
+RNA, and by analyzing sequences of them, we can gain an understanding of the\
+genetic code. This REPL program helps with such tasks.
 
-## Entities:
+## Entities
 
-- **Nucleotides**: Represented by the letters A (adenine), T (thymine), C (cytosine), and G (guanine). 
-
-- **Sequences**:  Sequences (strings) of nucleotides (AGGCTA).
-
--  **Motifs**: Specific patterns or repeated sequences within a nucleotide sequence.
-
+- **Nucleotides**: Represented by the letters A (adenine), T (thymine), C (cytosine), and G (guanine).
+- **Sequence**: A string of nucleotides (e.g., "ATCG").
+- **Chromosome**: A collection of sequences (e.g., "ATCG" "GCTA").
+- **Genome**: A collection of chromosomes (e.g., "ATCG" "GCTA" "CGTA").
 
 ## Operations
-- **Concatenation**: Combining two nucleotide sequences into one.
 
-- **Finding Motifs**: Finding the location of a certain string of nucleotides within a larger one.
+- **Concatenate**: Combines two nucleotide sequences into one.\
+  Example: `concat ATCG GCTA` results in `ATCGGCTA`.
 
-- **Complement**: Computing the complementary nucleotide sequence (AACG -> TTGC).
+- **Find Motif**: Finds the location of a certain string of nucleotides within a larger sequence.\
+  Example: `fmotif ATCGGCTA GCTA` finds `GCTA` within `ATCGGCTA` (index 4).
 
-- **Transcription**: Converting a DNA sequence into its RNA equivalent. (ATCGT -> AUCGU).
+- **Complement**: Computes the complementary nucleotide sequence (A -> T, T -> A, C -> G, G -> C).\
+  Example: `complement ATCG` results in `TAGC`.
+
+- **Transcribe**: Converts a DNA sequence into its RNA equivalent (A -> U, T -> A, C -> G, G -> C).\
+  Example: `transcribe ATCG` results in `UAGC`.
+
+- **Mutate**: Takes a sequence and a percentage to randomly change that percentage of nucleotides.\
+  Example: `mutate ATC 30` could result in `ATG`.
