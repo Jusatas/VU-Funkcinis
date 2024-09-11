@@ -12,7 +12,10 @@
 <find-motif> ::= "fmotif" <sequence> <sequence>
 <complement> ::= "complement" <sequence>
 <transcribe> ::= "transcribe" <sequence>
+
 <mutate> ::= "mutate" <sequence> <percentage> 
+
+
 
 
 

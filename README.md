@@ -28,3 +28,24 @@ genetic code. This REPL program helps with such tasks.
 
 - **Mutate**: Takes a sequence and a percentage to randomly change that percentage of nucleotides.\
   Example: `mutate ATC 30` could result in `ATG`.
+
+
+  <br><br>
+ ## BNF
+```bnf
+<nucleotide> ::= "A" | "T" | "C" | "G"
+<sequence> ::= <nucleotide> | <nucleotide> <sequence>
+
+<chromosome> ::= <sequence> | <sequence> <chromosome>
+<genome> ::= <chromosome> | <chromosome> <genome>
+
+<integer> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | <integer> <integer>
+<percentage> ::= <integer>
+
+
+<concatenate> ::= "concat" <sequence> <sequence>
+<find-motif> ::= "fmotif" <sequence> <sequence>
+<complement> ::= "complement" <sequence>
+<transcribe> ::= "transcribe" <sequence>
+
+<mutate> ::= "mutate" <sequence> <percentage> 
