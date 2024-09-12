@@ -29,8 +29,12 @@ genetic code. This REPL program helps with such tasks.
 - **Mutate**: Takes a sequence and a percentage to randomly change that percentage of nucleotides.\
   Example: `mutate ATC 30` could result in `ATG`.
 
+## Combining Commands
 
-  <br><br>
+Commands can be combined to perform more complex operations.\
+Example: `find-motif (concat ATCG GCTA) TCG` finds the motif TCG in ATCGGCTA.
+
+<br><br>
  ## BNF
 ```bnf
 <nucleotide> ::= "A" | "T" | "C" | "G"
