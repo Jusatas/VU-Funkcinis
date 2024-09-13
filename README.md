@@ -46,15 +46,9 @@ Example: `find-motif (concat ATCG GCTA) TCG` finds the motif TCG in ATCGGCTA.
 <integer> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | <integer> <integer>
 <percentage> ::= <integer>
 
-<concatenate> ::= "concat" <sequence> <sequence>
-<find-motif> ::= "fmotif" <sequence> <sequence>
-<complement> ::= "complement" <sequence>
-<transcribe> ::= "transcribe" <sequence>
-
-<mutate> ::= "mutate" <sequence> <percentage>
-
-<operation> ::= "concat" <operation> <operation>
-              | "find-motif" <operation> <operation>
-              | "complement" <operation>
-              | "transcribe" <operation>
-              | "mutate" <operation> <percentage>
+<operand> ::= <sequence> | <operation>
+<operation> ::= "concat" <operand> <operand>
+              | "find-motif" <operand> <operand>
+              | "complement" <operand>
+              | "transcribe" <operand>
+              | "mutate" <operand> <percentage>
