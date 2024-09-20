@@ -39,13 +39,13 @@ Example: `find-motif (concat ATCG GCTA) TCG` finds the motif TCG in ATCGGCTA.
 ```bnf
 <nucleotide> ::= "A" | "T" | "C" | "G"
 <sequence> ::= <nucleotide> | <nucleotide> <sequence>
-
+ 
 <chromosome> ::= <sequence> | <sequence> <chromosome>
 <genome> ::= <chromosome> | <chromosome> <genome>
-
+ 
 <integer> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | <integer> <integer>
 <percentage> ::= <integer>
-
+ 
 <operand> ::= <sequence> | <operation>
 <operation> ::= "concat" <operand> <operand>
               | "find-motif" <operand> <operand>
