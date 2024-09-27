@@ -76,8 +76,15 @@ parseNucleotide _ = Left "Error: invalid nucleotide."
 
 parseNucSeq :: String -> Either String String
 parseNucSeq [] = Right []
-parseNucSeq (x:xs)
+parseNucSeq (x:xs) =
+  case parseNucleotide x of --if nucleotide x
+    Right nucleotide -> --nucleotide x correct
+      case parseNucSeq xs of --if sequence xs (original sequence but without first element)
+        Right remainder -> Right (nucleotide : remainder) -- =true
+        Left parseError -> Left parseError
+    Left parseError -> Left parseError
 
+    
 -- | An entity which represents your program's state.
 -- Currently it has no constructors but you can introduce
 -- as many as needed.
