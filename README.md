@@ -32,7 +32,7 @@ genetic code. This REPL program helps with such tasks.
 ## Combining Commands
 
 Commands can be combined to perform more complex operations.\
-Example: `find-motif (concat ATCG GCTA) TCG` finds the motif TCG in ATCGGCTA.
+Example: `fmotif (concat ATCG GCTA) TCG` finds the motif TCG in ATCGGCTA.
 
 <br><br>
  ## BNF
