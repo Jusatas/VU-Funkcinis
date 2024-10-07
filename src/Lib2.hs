@@ -29,34 +29,7 @@ instance Show Query where
 -- | Parses user's input.
 -- The function must have tests.
 parseQuery :: String -> Either String Query
-parseQuery input =
-  case words input of
-    ("concat":x:y:[]) ->
-      if isNucSeq x && isNucSeq y
-        then Right (Concat x y)
-        else Left "Invalid concat arguments"
-
-    ("fmotif":x:y:[]) ->
-      if isNucSeq x && isNucSeq y
-        then Right (FMotif x y)
-        else Left "Invalid fmotif arguments"
-
-    ("complement":x:[]) ->
-      if isNucSeq x
-        then Right (Complement x)
-        else Left "Invalid complement arguments"
-
-    ("transcribe":x:[]) ->
-      if isNucSeq x
-        then Right (Complement x)
-        else Left "Invalid transcribe arguments"
-
-    ("mutate":x:y:[]) ->
-      if isNucSeq x && isInt y
-        then Right (Complement x)
-        else Left "Invalid transcribe arguments"
-
-    _ -> Left "Invalid input"
+parseQuery _ = Left "Not implemented 2"
 
 --TODO
 isNucSeq :: String -> Bool
@@ -65,7 +38,26 @@ isNucSeq _ = True
 isInt :: String -> Bool
 isInt _ = True
 
+-- >>> charParser 'c' "abc"
+-- Left "c is not the first element of bc"
+charParser :: Char -> String -> Either String (Char,String)
+charParser c [] =
+  Left ("Cannot find " ++ [c] ++ " in an empty list")
+charParser c (h:t) =
+  if c == h then Right(c, t)
+  else Left ([c] ++ " is not the first element of " ++ t)
 
+-- >>> stringParser "concat" "concat AAUG TCCG"
+-- Right " AAUG TCCG"
+stringParser :: String -> String -> Either String String
+stringParser [] input = Right input
+stringParser (h:t) input =
+  case charParser h input of
+    Left errorFromChar -> Left errorFromChar
+    Right (_, rest) -> stringParser t rest
+
+-- >>> parseNucleotide 'u' 
+-- Left "Error: invalid nucleotide."
 parseNucleotide :: Char -> Either String Char
 parseNucleotide 'A' = Right 'A'
 parseNucleotide 'T' = Right 'T'
@@ -74,6 +66,8 @@ parseNucleotide 'C' = Right 'C'
 parseNucleotide 'G' = Right 'G'
 parseNucleotide _ = Left "Error: invalid nucleotide."
 
+-- >>> parseNucSeq "ATC6G"
+-- Left "Error: invalid nucleotide."
 parseNucSeq :: String -> Either String String
 parseNucSeq [] = Right []
 parseNucSeq (x:xs) =
@@ -84,7 +78,7 @@ parseNucSeq (x:xs) =
         Left parseError -> Left parseError
     Left parseError -> Left parseError
 
-    
+
 -- | An entity which represents your program's state.
 -- Currently it has no constructors but you can introduce
 -- as many as needed.
