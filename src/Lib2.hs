@@ -31,12 +31,9 @@ instance Show Query where
 parseQuery :: String -> Either String Query
 parseQuery _ = Left "Not implemented 2"
 
---TODO
-isNucSeq :: String -> Bool
-isNucSeq _ = True
---TODO
-isInt :: String -> Bool
-isInt _ = True
+
+
+
 
 -- >>> charParser 'c' "abc"
 -- Left "c is not the first element of bc"
@@ -66,14 +63,16 @@ parseNucleotide 'C' = Right 'C'
 parseNucleotide 'G' = Right 'G'
 parseNucleotide _ = Left "Error: invalid nucleotide."
 
--- >>> parseNucSeq "ATC6G"
+-- >>> parseNucSeq "ATCG G"
 -- Left "Error: invalid nucleotide."
 parseNucSeq :: String -> Either String String
 parseNucSeq [] = Right []
-parseNucSeq (x:xs) =
-  case parseNucleotide x of --if nucleotide x
+parseNucSeq (h:t) =
+  if h == ' ' then --if there was at least one nucleotide and there is a space, stop.
+    Right []
+  case parseNucleotide h of --if nucleotide x
     Right nucleotide -> --nucleotide x correct
-      case parseNucSeq xs of --if sequence xs (original sequence but without first element)
+      case parseNucSeq t of --if sequence xs (original sequence but without first element)
         Right remainder -> Right (nucleotide : remainder) -- =true
         Left parseError -> Left parseError
     Left parseError -> Left parseError
