@@ -26,34 +26,8 @@ instance Eq Query where
 instance Show Query where
   show _ = ""
 
--- | Parses user's input.
--- The function must have tests.
-parseQuery :: String -> Either String Query
-parseQuery _ = Left "Not implemented 2"
 
--- >>> parseConcat "concat CCGT G"
--- Right 
-parseConcat :: String -> Either String Query
-parseConcat input =
-  case stringParser "concat " input of --query starts with concat and space?
-    Left e1 -> Left e1
-    Right rest1 ->
-      case parseNucSeq rest1 of --query has a nucleotide sequence?
-      Left e2 -> Left e2
-      Right (seq1, rest2) -> 
-        case stringParser " " rest2 of --query has space after nucleotide sequence?
-        Left e3 -> Left e3
-        Right rest3 ->
-          case parseNucSeq rest3 of --query has a nucleotide sequence after space?
-          Left e4 -> Left e4
-          Right (seq2, _) -> 
-            if null seq2
-            then Left "Error: second nucleotide sequence missing."
-            else Right (Concat seq1 seq2)
-
-
-
--- >>> charParser 'c' "abc"
+  -- >>> charParser 'c' "abc"
 -- Left "c is not the first element of bc"
 charParser :: Char -> String -> Either String (Char,String)
 charParser c [] =
@@ -70,6 +44,11 @@ stringParser (h:t) input =
   case charParser h input of
     Left errorFromChar -> Left errorFromChar
     Right (_, rest) -> stringParser t rest
+
+-- | Parses user's input.
+-- The function must have tests.
+parseQuery :: String -> Either String Query
+parseQuery _ = Left "Not implemented 2"
 
 -- >>> parseNucleotide 'u' 
 -- Left "Error: invalid nucleotide."
@@ -95,6 +74,77 @@ parseNucSeq (h:t) =
           Right (nucleotideSeq, remainder) -> Right (nucleotide : nucleotideSeq, remainder) -- =true
           Left parseError -> Left parseError
       Left parseError -> Left parseError
+
+
+
+-- >>> parseConcat "concat CCGT g"
+-- Left "Error: invalid nucleotide."
+parseConcat :: String -> Either String Query
+parseConcat input =
+  case stringParser "concat " input of --query starts with concat and space?
+    Left e1 -> Left e1
+    Right rest1 ->
+      case parseNucSeq rest1 of --query has a nucleotide sequence?
+      Left e2 -> Left e2
+      Right (seq1, rest2) -> 
+        case stringParser " " rest2 of --query has space after nucleotide sequence?
+        Left e3 -> Left e3
+        Right rest3 ->
+          case parseNucSeq rest3 of --query has a nucleotide sequence after space?
+          Left e4 -> Left e4
+          Right (seq2, _) -> 
+            if null seq2
+            then Left "Error: second nucleotide sequence missing."
+            else Right (Concat seq1 seq2)
+
+parseFMotif :: String -> Either String Query
+parseFMotif input =
+  case stringParser "fmotif " input of -- query starts with fmotif and a space?
+    Left e1 -> Left e1
+    Right rest1 ->
+      case parseNucSeq rest1 of -- first nucleotide sequence?
+        Left e2 -> Left e2
+        Right (seq1, rest2) -> 
+          case stringParser " " rest2 of -- space after the first sequence?
+            Left e3 -> Left e3
+            Right rest3 -> 
+              case parseNucSeq rest3 of --query has a nucleotide sequence after space?
+              Left e4 -> Left e4
+              Right (seq2, _) -> 
+                if null seq2
+                then Left "Error: second nucleotide sequence missing."
+                else Right (Concat seq1 seq2)
+
+parseComplement :: String -> Either String Query
+parseComplement input =
+  case stringParser "complement " input of -- query starts with complement and a space?
+    Left e1 -> Left e1
+    Right rest1 ->
+      case parseNucSeq rest1 of -- query has a nucleotide sequence?
+        Left e2 -> Left e2
+        Right (seq1, _) -> Right (Complement seq1)
+
+parseTranscribe :: String -> Either String Query
+parseTranscribe input =
+  case stringParser "transcribe " input of -- query starts with transcribe and a space?
+    Left e1 -> Left e1
+    Right rest1 ->
+      case parseNucSeq rest1 of -- query has a nucleotide sequence?
+        Left e2 -> Left e2
+        Right (seq1, _) -> Right (Transcribe seq1)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 -- | An entity which represents your program's state.
