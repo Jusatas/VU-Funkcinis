@@ -31,7 +31,8 @@ instance Show Query where
 parseQuery :: String -> Either String Query
 parseQuery _ = Left "Not implemented 2"
 
-
+-- >>> parseConcat "concat CCGT G"
+-- Right 
 parseConcat :: String -> Either String Query
 parseConcat input =
   case stringParser "concat " input of --query starts with concat and space?
@@ -45,7 +46,10 @@ parseConcat input =
         Right rest3 ->
           case parseNucSeq rest3 of --query has a nucleotide sequence after space?
           Left e4 -> Left e4
-          Right (seq2, _) -> Right (Concat seq1 seq2)
+          Right (seq2, _) -> 
+            if null seq2
+            then Left "Error: second nucleotide sequence missing."
+            else Right (Concat seq1 seq2)
 
 
 
