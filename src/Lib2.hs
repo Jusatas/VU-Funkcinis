@@ -45,13 +45,14 @@ stringParser (h:t) input =
     Left errorFromChar -> Left errorFromChar
     Right (_, rest) -> stringParser t rest
 
-
-parseInt :: String -> Either String (Integer, String)
+-- >>> parseInt "a12012"
+-- Left "Error: 'a' is not a valid digit."
+parseInt :: String -> Either String Integer
 parseInt [] = Left "Error: no digits found."
 parseInt input = parseDigits 0 input
 
-parseDigits :: Integer -> String -> Either String (Integer, String)
-parseDigits acc [] = Right (acc, [])
+parseDigits :: Integer -> String -> Either String Integer
+parseDigits acc [] = Right acc
 parseDigits acc (h:t) 
   | h == '0' = parseDigits (acc * 10 + 0) t
   | h == '1' = parseDigits (acc * 10 + 1) t
@@ -63,7 +64,7 @@ parseDigits acc (h:t)
   | h == '7' = parseDigits (acc * 10 + 7) t
   | h == '8' = parseDigits (acc * 10 + 8) t
   | h == '9' = parseDigits (acc * 10 + 9) t
-  | otherwise = Right (acc, h:t) -- Stop when a non-digit character is found
+  | otherwise = Left ("Error: '" ++ [h] ++ "' is not a valid digit.")  -- Return an error for non-digit characters.
 
   
 -- | Parses user's input.
@@ -153,6 +154,24 @@ parseTranscribe input =
       case parseNucSeq rest1 of -- query has a nucleotide sequence?
         Left e2 -> Left e2
         Right (seq1, _) -> Right (Transcribe seq1)
+
+-- >>> parseMutate "mutate CGTGT 2"
+-- Right 
+
+parseMutate :: String -> Either String Query
+parseMutate input =
+  case stringParser "mutate " input of -- query starts with mutate and a space?
+    Left e1 -> Left e1
+    Right rest1 ->
+      case parseNucSeq rest1 of -- single nucleotide sequence?
+        Left e2 -> Left e2
+        Right (seq1, rest2) ->
+          case stringParser " " rest2 of -- space after the nucleotide sequence?
+            Left e3 -> Left e3
+            Right rest3 ->
+              case parseInt rest3 of -- integer?
+                Left e4 -> Left e4
+                Right (myint) -> Right (Mutate seq1 myint)
 
 
 
