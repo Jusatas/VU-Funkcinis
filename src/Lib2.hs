@@ -32,6 +32,20 @@ parseQuery :: String -> Either String Query
 parseQuery _ = Left "Not implemented 2"
 
 
+parseConcat :: String -> Either String Query
+parseConcat input =
+  case stringParser "concat " input of --query starts with concat and space?
+    Left e1 -> Left e1
+    Right rest1 ->
+      case parseNucSeq rest1 of --query has a nucleotide sequence?
+      Left e2 -> Left e2
+      Right (seq1, rest2) -> 
+        case stringParser " " rest2 of --query has space after nucleotide sequence?
+        Left e3 -> Left e3
+        Right rest3 ->
+          case parseNucSeq rest3 of --query has a nucleotide sequence after space?
+          Left e4 -> Left e4
+          Right (seq2, _) -> Right (Concat seq1 seq2)
 
 
 
@@ -63,19 +77,20 @@ parseNucleotide 'C' = Right 'C'
 parseNucleotide 'G' = Right 'G'
 parseNucleotide _ = Left "Error: invalid nucleotide."
 
--- >>> parseNucSeq "ATCG G"
+-- >>> parseNucSeq "3 GA"
 -- Left "Error: invalid nucleotide."
-parseNucSeq :: String -> Either String String
-parseNucSeq [] = Right []
+parseNucSeq :: String -> Either String (String, String)
+parseNucSeq [] = Right ([], [])
 parseNucSeq (h:t) =
   if h == ' ' then --if there was at least one nucleotide and there is a space, stop.
-    Right []
-  case parseNucleotide h of --if nucleotide x
-    Right nucleotide -> --nucleotide x correct
-      case parseNucSeq t of --if sequence xs (original sequence but without first element)
-        Right remainder -> Right (nucleotide : remainder) -- =true
-        Left parseError -> Left parseError
-    Left parseError -> Left parseError
+    Right ([], h:t)
+  else
+    case parseNucleotide h of --if nucleotide h
+      Right nucleotide -> --nucleotide h correct
+        case parseNucSeq t of --if sequence t (original sequence but without first element)
+          Right (nucleotideSeq, remainder) -> Right (nucleotide : nucleotideSeq, remainder) -- =true
+          Left parseError -> Left parseError
+      Left parseError -> Left parseError
 
 
 -- | An entity which represents your program's state.
