@@ -45,6 +45,27 @@ stringParser (h:t) input =
     Left errorFromChar -> Left errorFromChar
     Right (_, rest) -> stringParser t rest
 
+
+parseInt :: String -> Either String (Integer, String)
+parseInt [] = Left "Error: no digits found."
+parseInt input = parseDigits 0 input
+
+parseDigits :: Integer -> String -> Either String (Integer, String)
+parseDigits acc [] = Right (acc, [])
+parseDigits acc (h:t) 
+  | h == '0' = parseDigits (acc * 10 + 0) t
+  | h == '1' = parseDigits (acc * 10 + 1) t
+  | h == '2' = parseDigits (acc * 10 + 2) t
+  | h == '3' = parseDigits (acc * 10 + 3) t
+  | h == '4' = parseDigits (acc * 10 + 4) t
+  | h == '5' = parseDigits (acc * 10 + 5) t
+  | h == '6' = parseDigits (acc * 10 + 6) t
+  | h == '7' = parseDigits (acc * 10 + 7) t
+  | h == '8' = parseDigits (acc * 10 + 8) t
+  | h == '9' = parseDigits (acc * 10 + 9) t
+  | otherwise = Right (acc, h:t) -- Stop when a non-digit character is found
+
+  
 -- | Parses user's input.
 -- The function must have tests.
 parseQuery :: String -> Either String Query
