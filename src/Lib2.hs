@@ -1,4 +1,4 @@
-module Lib1
+module Lib2
     ( Query(..),
       parseQuery,
       State(..),
@@ -50,7 +50,8 @@ parseNucleotide 'G' = Right 'G'
 parseNucleotide _   = Left "Error: invalid nucleotide."
 
 -- | Parses a nucleotide sequence (string of valid nucleotides).
--- <sequence> ::= <nucleotide> | <nucleotide> <sequence>
+-- >>> parseNucSeq "ATG"
+
 parseNucSeq :: String -> Either String (String, String)
 parseNucSeq [] = Right ([], [])
 parseNucSeq (h:t)
@@ -118,19 +119,102 @@ parseMutate input =
           Left err -> Left err
           Right int -> Right (Mutate seq1 int)
 
--- <operation> ::= "concat" <operand> <operand>
---               | "find-motif" <operand> <operand>
---               | "complement" <operand>
---               | "transcribe" <operand>
---               | "mutate" <operand> <percentage>
-parseQuery :: String -> Either String Query
-parseQuery input
-  | take 7 input == "concat "    = parseConcat input
-  | take 7 input == "fmotif "    = parseFMotif input
-  | take 11 input == "complement " = parseComplement input
-  | take 11 input == "transcribe " = parseTranscribe input
-  | take 7 input == "mutate "    = parseMutate input
-  | otherwise = Left "Error: unknown command."
+-- >>> parseQuery "mutate GGC (fmotif GGCCGC GC)"
+-- Right "GGC"
+
+
+-- Right "GCC"
+-- >>> parseQuery "mutate (concat CC (complement G)) 50"
+-- Right "GCC"
+
+parseQuery :: String -> Either String String
+parseQuery input =
+    case findInnermostParentheses input of
+        Nothing -> executeCommand input  -- No parentheses, try to execute the command
+        Just (start, end) ->
+            -- Extract content inside the parentheses
+            let inside = extractSubstring input (start + 1) (end - 1)
+                -- Recursively parse the content inside the parentheses
+                result = parseQuery inside
+            in case result of
+                Left err -> Left err
+                Right parsedResult ->
+                    -- Replace the evaluated result back in the string and continue parsing
+                    let newInput = replaceSubstring input start end parsedResult
+                    in parseQuery newInput  -- Continue processing the updated input
+
+
+
+findInnermostParentheses :: String -> Maybe (Int, Int)
+findInnermostParentheses input = findDeepest 0 (-1, -1) 0
+  where
+    findDeepest _ (start, end) idx
+        | idx >= length input = if start /= -1 then Just (start, end) else Nothing
+        | otherwise =
+            let char = input !! idx
+            in case char of
+                '(' -> findDeepest 1 (idx, -1) (idx + 1)
+                ')' -> if start /= -1 && end == -1
+                       then Just (start, idx)
+                       else findDeepest 0 (-1, -1) (idx + 1)
+                _   -> findDeepest 0 (start, end) (idx + 1)
+
+extractSubstring :: String -> Int -> Int -> String
+extractSubstring input start end = extractHelper input start end 0
+
+extractHelper :: String -> Int -> Int -> Int -> String
+extractHelper [] _ _ _ = [] 
+extractHelper (x:xs) start end currentIndex
+    | currentIndex > end = [] 
+    | currentIndex >= start = x : extractHelper xs start end (currentIndex + 1)
+    | otherwise = extractHelper xs start end (currentIndex + 1)
+
+
+-- Replace a part of the string between start and end with the result
+replaceSubstring :: String -> Int -> Int -> String -> String
+replaceSubstring input start end result =
+    let before = take start input
+        after  = drop (end + 1) input
+    in before ++ result ++ after
+
+executeCommand :: String -> Either String String
+executeCommand input =
+    case parseCommand input of
+        Left err -> Left err
+        Right query -> evaluateQuery query
+
+parseCommand :: String -> Either String Query
+parseCommand input =
+    case parseConcat input of
+        Right result -> Right result
+        Left _ ->
+            case parseFMotif input of
+                Right result -> Right result
+                Left _ ->
+                    case parseComplement input of
+                        Right result -> Right result
+                        Left _ ->
+                            case parseTranscribe input of
+                                Right result -> Right result
+                                Left _ ->
+                                    case parseMutate input of
+                                        Right result -> Right result
+                                        Left _ -> Left "Error: Unknown command."
+
+evaluateQuery :: Query -> Either String String
+evaluateQuery (Complement seq') = complementSequence seq'  -- Calls complementSequence
+evaluateQuery (Transcribe seq') = Right (transcribeSequence seq')  -- Calls transcribeSequence
+evaluateQuery (Mutate seq' percentage) = Right (mutate seq' percentage)  -- Mutates the sequence
+evaluateQuery (Concat seq1 seq2) = Right (seq1 ++ seq2)  -- Concatenates two sequences
+evaluateQuery (FMotif seq1 motif) =
+    let result = fmotif seq1 motif
+    in Right (show result)
+
+
+--evaluateQuery (FMotif seq1 motif) = 
+--    if motif `elem` subsequences seq1
+--    then Right "Motif found"
+--    else Right "Motif not found"
 
 -- | Represents the program state, holding the current nucleotide sequence.
 data State = State {
@@ -172,6 +256,8 @@ containsMotif seq1 seq2 =
   then True
   else containsMotif (tail seq1) seq2
 
+-- >>> startsWith "ATGC" "ATG"
+-- True
 startsWith :: String -> String -> Bool
 startsWith [] _ = False
 startsWith _ [] = True
@@ -202,9 +288,9 @@ transcribeNucleotide 'T' = 'U'
 transcribeNucleotide nucleotide = nucleotide
 
 mutate :: String -> Integer -> String
-mutate seq percentage =
-  let numToMutate = fromIntegral (length seq) * percentage `div` 100
-      (toMutate, rest) = splitAt (fromInteger numToMutate) seq
+mutate seq' percentage =
+  let numToMutate = fromIntegral (length seq') * percentage `div` 100
+      (toMutate, rest) = splitAt (fromInteger numToMutate) seq'
   in map mutateNucleotide toMutate ++ rest
 
 -- | Mutates a single nucleotide to another random nucleotide (simplified).
@@ -214,3 +300,17 @@ mutateNucleotide 'T' = 'A'
 mutateNucleotide 'C' = 'G'
 mutateNucleotide 'G' = 'C'
 mutateNucleotide nucleotide = nucleotide
+
+-- Returns 1 if found, 0 if not found.
+fmotif :: String -> String -> Int
+fmotif [] _ = 0  -- If sequence is empty, return 0
+fmotif _ [] = 0  -- If motif is empty, return 0
+fmotif seq1 motif
+    | startsWith seq1 motif = 1  -- Found at the start
+    | otherwise = fmotif (tail seq1) motif  -- Recursively check the rest
+  where
+    -- Check if seq1 starts with the motif
+    startsWith :: String -> String -> Bool
+    startsWith [] _ = False
+    startsWith _ [] = True
+    startsWith (x:xs) (y:ys) = (x == y) && startsWith xs ys
