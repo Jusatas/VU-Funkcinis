@@ -6,8 +6,6 @@ module Lib2
       stateTransition
     ) where
 
-import Data.Char (isDigit)
-
 data Query = Concat String String
            | FMotif String String
            | Complement String
@@ -35,11 +33,19 @@ parseInt input = parseDigits 0 input
 
 -- | Helper for `parseInt`.
 parseDigits :: Integer -> String -> Either String Integer
-parseDigits acc [] = Right acc
-parseDigits acc (h:t)
-  | isDigit h = parseDigits (acc * 10 + toInteger (fromEnum h - fromEnum '0')) t
-  | otherwise = Left ("Error: '" ++ [h] ++ "' is not a valid digit.")
-
+parseDigits acc [] = Right (acc)
+parseDigits acc (h:t) 
+  | h == '0' = parseDigits (acc * 10 + 0) t
+  | h == '1' = parseDigits (acc * 10 + 1) t
+  | h == '2' = parseDigits (acc * 10 + 2) t
+  | h == '3' = parseDigits (acc * 10 + 3) t
+  | h == '4' = parseDigits (acc * 10 + 4) t
+  | h == '5' = parseDigits (acc * 10 + 5) t
+  | h == '6' = parseDigits (acc * 10 + 6) t
+  | h == '7' = parseDigits (acc * 10 + 7) t
+  | h == '8' = parseDigits (acc * 10 + 8) t
+  | h == '9' = parseDigits (acc * 10 + 9) t
+  | otherwise = Right (acc) -- Stop when a non-digit character is found
 -- <nucleotide> ::= "A" | "T" | "C" | "G"
 parseNucleotide :: Char -> Either String Char
 parseNucleotide 'A' = Right 'A'
@@ -51,6 +57,7 @@ parseNucleotide _   = Left "Error: invalid nucleotide."
 
 -- | Parses a nucleotide sequence (string of valid nucleotides).
 -- >>> parseNucSeq "ATG"
+-- Right ("ATG","")
 
 parseNucSeq :: String -> Either String (String, String)
 parseNucSeq [] = Right ([], [])
@@ -121,6 +128,7 @@ parseMutate input =
 
 -- >>> parseQuery "mutate GGC (fmotif GGCCGC GC)"
 -- Right "GGC"
+
 
 
 -- Right "GCC"
