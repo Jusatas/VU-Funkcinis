@@ -3,7 +3,7 @@ module Lib2
       parseQuery,
       State(..),
       emptyState,
-      stateTransition
+      --stateTransition
     ) where
 
 data Query = Concat String String
@@ -135,21 +135,20 @@ parseMutate input =
 -- >>> parseQuery "mutate (concat CC (complement G)) 50"
 -- Right "GCC"
 
+
+
 parseQuery :: String -> Either String String
 parseQuery input =
     case findInnermostParentheses input of
-        Nothing -> executeCommand input  -- No parentheses, try to execute the command
+        Nothing -> executeCommand input
         Just (start, end) ->
-            -- Extract content inside the parentheses
             let inside = extractSubstring input (start + 1) (end - 1)
-                -- Recursively parse the content inside the parentheses
                 result = parseQuery inside
             in case result of
                 Left err -> Left err
                 Right parsedResult ->
-                    -- Replace the evaluated result back in the string and continue parsing
                     let newInput = replaceSubstring input start end parsedResult
-                    in parseQuery newInput  -- Continue processing the updated input
+                    in parseQuery newInput
 
 
 
@@ -232,30 +231,6 @@ data State = State {
 -- | Initial state of the program.
 emptyState :: State
 emptyState = State { nucleotideSequence = "" }
-
--- | Updates the state based on a query.
-stateTransition :: State -> Query -> Either String (Maybe String, State)
-stateTransition currentState (Concat seq1 seq2) =
-  let newSequence = seq1 ++ seq2
-  in Right (Just ("Concatenated: " ++ newSequence), currentState { nucleotideSequence = newSequence })
-
-stateTransition currentState (FMotif seq1 seq2) =
-  if containsMotif seq1 seq2
-  then Right (Just ("Motif " ++ seq2 ++ " found in " ++ seq1), currentState)
-  else Left "Error: Motif not found."
-
-stateTransition currentState (Complement seq1) =
-  case complementSequence seq1 of
-    Left err -> Left err
-    Right compSeq -> Right (Just ("Complement: " ++ compSeq), currentState { nucleotideSequence = compSeq })
-
-stateTransition currentState (Transcribe seq1) =
-  let transcribedSeq = transcribeSequence seq1
-  in Right (Just ("Transcribed: " ++ transcribedSeq), currentState { nucleotideSequence = transcribedSeq })
-
-stateTransition currentState (Mutate seq1 percentage) =
-  let mutatedSeq = mutate seq1 percentage
-  in Right (Just ("Mutated sequence: " ++ mutatedSeq), currentState { nucleotideSequence = mutatedSeq })
 
 containsMotif :: String -> String -> Bool
 containsMotif [] _ = False
