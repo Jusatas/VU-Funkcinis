@@ -22,9 +22,6 @@ data Nucleotide = A | T | U | C | G
 
 type Parser a = String -> Either String (a, String)
 
--- parseChar :: Char -> Parser Char
-
-
 parseChar :: Char -> Parser Char
 parseChar c [] = Left ("Cannot find " ++ [c] ++ " in an empty input")
 parseChar c (h:t)
@@ -50,7 +47,6 @@ parseInt :: Parser Integer
 parseInt [] = Left "Error: no digits found."
 parseInt input = parseDigits 0 input
 
--- | Helper for `parseInt`.
 parseDigits :: Integer -> String -> Either String (Integer, String)
 parseDigits acc [] = Right (acc, [])  -- No more input; return the accumulated integer and an empty remainder
 parseDigits acc (h:t)
@@ -73,13 +69,7 @@ parseNucleotide 'U' = Right U
 parseNucleotide 'C' = Right C
 parseNucleotide 'G' = Right G
 parseNucleotide _   = Left "Error: invalid nucleotide."
-
--- | Parses a nucleotide sequence (string of valid nucleotides).
--- >>> parseNucSeq "ATGx"
--- WAS WAS Right ("ATG","")
--- WAS NOW Right ([A,T,G],"")
--- NOW Right ([A,T,G],"")
-
+-- >>> parseNucSeq "A AG"
 
 parseNucSeq :: Parser [Nucleotide]
 parseNucSeq [] = Right ([], [])
@@ -91,8 +81,9 @@ parseNucSeq (h:t) = case parseNucleotide h of
 
 
 
+-- >>> parseConcat "concat AGGT GT"
+-- Right (Concat (Sequence [A,G,G,T]) (Sequence [G,T]),"")
 
--- <operation> ::= "concat" <operand> <operand>
 parseConcat :: Parser Query
 parseConcat input = 
   case parseString "concat " input of
@@ -106,8 +97,7 @@ parseConcat input =
           Right (seq2, remaining) -> Right (Concat (Sequence seq1) (Sequence seq2), remaining)
 
 
--- <operation> ::= "find-motif" <operand> <operand>
-
+-- <operation> ::= "fmotif" <operand> <operand>
 parseFMotif :: Parser Query
 parseFMotif input =
   case parseString "fmotif " input of
@@ -141,7 +131,6 @@ parseTranscribe input =
 
 
 -- <operation> ::= "mutate" <operand> <percentage>
-
 parseMutate :: Parser Query
 parseMutate input =
   case parseString "mutate " input of
@@ -154,109 +143,28 @@ parseMutate input =
           Left err -> Left err
           Right (int, remaining) -> Right (Mutate (Sequence seq1) int, remaining)
 
--- >>> parseQuery "mutate GGC (fmotif GGCCGC GC)"
--- /workspaces/fp-2024/src/Lib2.hs:236:63: error:
---     • Couldn't match expected type ‘Query’
---                   with actual type ‘(Query, String)’
---     • In the first argument of ‘Right’, namely ‘result’
---       In the expression: Right result
---       In a case alternative: Right result -> Right result
--- (deferred type error)
+
+or2 :: Parser a -> Parser a -> Parser a
+or2 p1 p2 input =
+  case p1 input of
+    Right result -> Right result
+    Left _ -> p2 input
+
+or3 :: Parser a -> Parser a -> Parser a -> Parser a
+or3 p1 p2 p3 input =
+  case p1 input of
+    Right result -> Right result
+    Left _ -> case p2 input of
+      Right result -> Right result
+      Left _ -> p3 input
 
 
+parseQuery :: Parser Query
+parseQuery input = or3 parseConcat parseFMotif (or3 parseComplement parseTranscribe parseMutate) input
 
--- Right "GCC"
+
 -- >>> parseQuery "mutate (concat CC (complement G)) 50"
--- Right "GCC"
 
-
-
-
-parseQuery :: String -> Either String String
-parseQuery input =
-    case findInnermostParentheses input of
-        Nothing -> executeCommand input
-        Just (start, end) ->
-            let inside = extractSubstring input (start + 1) (end - 1)
-                result = parseQuery inside
-            in case result of
-                Left err -> Left err
-                Right parsedResult ->
-                    let newInput = replaceSubstring input start end parsedResult
-                    in parseQuery newInput
-
-
-
-findInnermostParentheses :: String -> Maybe (Int, Int)
-findInnermostParentheses input = findDeepest 0 (-1, -1) 0
-  where
-    findDeepest _ (start, end) idx
-        | idx >= length input = if start /= -1 then Just (start, end) else Nothing
-        | otherwise =
-            let char = input !! idx
-            in case char of
-                '(' -> findDeepest 1 (idx, -1) (idx + 1)
-                ')' -> if start /= -1 && end == -1
-                       then Just (start, idx)
-                       else findDeepest 0 (-1, -1) (idx + 1)
-                _   -> findDeepest 0 (start, end) (idx + 1)
-
-extractSubstring :: String -> Int -> Int -> String
-extractSubstring input start end = extractHelper input start end 0
-
-extractHelper :: String -> Int -> Int -> Int -> String
-extractHelper [] _ _ _ = [] 
-extractHelper (x:xs) start end currentIndex
-    | currentIndex > end = [] 
-    | currentIndex >= start = x : extractHelper xs start end (currentIndex + 1)
-    | otherwise = extractHelper xs start end (currentIndex + 1)
-
-
--- Replace a part of the string between start and end with the result
-replaceSubstring :: String -> Int -> Int -> String -> String
-replaceSubstring input start end result =
-    let before = take start input
-        after  = drop (end + 1) input
-    in before ++ result ++ after
-
-executeCommand :: String -> Either String String
-executeCommand input =
-    case parseCommand input of
-        Left err -> Left err
-        Right query -> evaluateQuery query
-
-parseCommand :: String -> Either String Query
-parseCommand input =
-    case parseConcat input of
-        Right result -> Right result
-        Left _ ->
-            case parseFMotif input of
-                Right result -> Right result
-                Left _ ->
-                    case parseComplement input of
-                        Right result -> Right result
-                        Left _ ->
-                            case parseTranscribe input of
-                                Right result -> Right result
-                                Left _ ->
-                                    case parseMutate input of
-                                        Right result -> Right result
-                                        Left _ -> Left "Error: Unknown command."
-
-evaluateQuery :: Query -> Either String String
-evaluateQuery (Complement seq') = complementSequence seq'  -- Calls complementSequence
-evaluateQuery (Transcribe seq') = Right (transcribeSequence seq')  -- Calls transcribeSequence
-evaluateQuery (Mutate seq' percentage) = Right (mutate seq' percentage)  -- Mutates the sequence
-evaluateQuery (Concat seq1 seq2) = Right (seq1 ++ seq2)  -- Concatenates two sequences
-evaluateQuery (FMotif seq1 motif) =
-    let result = fmotif seq1 motif
-    in Right (show result)
-
-
---evaluateQuery (FMotif seq1 motif) = 
---    if motif `elem` subsequences seq1
---    then Right "Motif found"
---    else Right "Motif not found"
 
 -- | Represents the program state, holding the current nucleotide sequence.
 data State = State {
