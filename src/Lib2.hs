@@ -14,8 +14,9 @@ data Query = Concat Operand Operand
            deriving (Show, Eq)
 
 data Operand = Sequence [Nucleotide]
-             | Query
+             | NestedQuery Query
              deriving (Show, Eq)
+
 
 data Nucleotide = A | T | U | C | G
   deriving (Show, Eq)
@@ -26,7 +27,7 @@ parseChar :: Char -> Parser Char
 parseChar c [] = Left ("Cannot find " ++ [c] ++ " in an empty input")
 parseChar c (h:t)
   | c == h    = Right (c, t)
-  | otherwise = Left ([c] ++ " is not the first element of " ++ (h:t))
+  | otherwise = Left ("|" ++ [c] ++ "| is not the first element of " ++ (h:t))
 
 parseString :: String -> Parser String
 parseString [] input = Right ([], input)
@@ -80,31 +81,32 @@ parseNucSeq (h:t) = case parseNucleotide h of
 -- >>> parseConcat "concat AGGT GT"
 -- Right (Concat (Sequence [A,G,G,T]) (Sequence [G,T]),"")
 
+
 parseConcat :: Parser Query
 parseConcat input = 
   case parseString "concat " input of
     Left err -> Left err
-    Right (_, rest1) -> case parseNucSeq rest1 of
+    Right (_, rest1) -> case parseOperand rest1 of
       Left err -> Left err
-      Right (seq1, rest2) -> case parseChar ' ' rest2 of
+      Right (op1, rest2) -> case parseChar ' ' rest2 of
         Left err -> Left err
-        Right (_, rest3) -> case parseNucSeq rest3 of
+        Right (_, rest3) -> case parseOperand rest3 of
           Left err -> Left err
-          Right (seq2, remaining) -> Right (Concat (Sequence seq1) (Sequence seq2), remaining)
-
+          Right (op2, remaining) -> Right (Concat op1 op2, remaining)
 
 -- <operation> ::= "fmotif" <operand> <operand>
 parseFMotif :: Parser Query
 parseFMotif input =
   case parseString "fmotif " input of
     Left err -> Left err
-    Right (_, rest1) -> case parseNucSeq rest1 of
+    Right (_, rest1) -> case parseOperand rest1 of
       Left err -> Left err
-      Right (seq1, rest2) -> case parseString " " rest2 of
+      Right (op1, rest2) -> case parseChar ' ' rest2 of
         Left err -> Left err
-        Right (_, rest3) -> case parseNucSeq rest3 of
+        Right (_, rest3) -> case parseOperand rest3 of
           Left err -> Left err
-          Right (seq2, remaining) -> Right (FMotif (Sequence seq1) (Sequence seq2), remaining)
+          Right (op2, remaining) -> Right (FMotif op1 op2, remaining)
+
 
 
 -- <operation> ::= "complement" <operand>
@@ -112,18 +114,19 @@ parseComplement :: Parser Query
 parseComplement input =
   case parseString "complement " input of
     Left err -> Left err
-    Right (_, rest) -> case parseNucSeq rest of
+    Right (_, rest) -> case parseOperand rest of
       Left err -> Left err
-      Right (seq1, remaining) -> Right (Complement (Sequence seq1), remaining)
+      Right (op, remaining) -> Right (Complement op, remaining)
 
 -- <operation> ::= "transcribe" <operand>
 parseTranscribe :: Parser Query
 parseTranscribe input =
   case parseString "transcribe " input of
     Left err -> Left err
-    Right (_, rest) -> case parseNucSeq rest of
+    Right (_, rest) -> case parseOperand rest of
       Left err -> Left err
-      Right (seq1, remaining) -> Right (Transcribe (Sequence seq1), remaining)
+      Right (op, remaining) -> Right (Transcribe op, remaining)
+
 
 
 -- <operation> ::= "mutate" <operand> <percentage>
@@ -131,13 +134,14 @@ parseMutate :: Parser Query
 parseMutate input =
   case parseString "mutate " input of
     Left err -> Left err
-    Right (_, rest1) -> case parseNucSeq rest1 of
+    Right (_, rest1) -> case parseOperand rest1 of
       Left err -> Left err
-      Right (seq1, rest2) -> case parseString " " rest2 of
+      Right (op, rest2) -> case parseString " " rest2 of
         Left err -> Left err
         Right (_, rest3) -> case parseInt rest3 of
           Left err -> Left err
-          Right (int, remaining) -> Right (Mutate (Sequence seq1) int, remaining)
+          Right (int, remaining) -> Right (Mutate op int, remaining)
+
 
 or5 :: Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a
 or5 p1 p2 p3 p4 p5 input =
@@ -156,13 +160,53 @@ or5 p1 p2 p3 p4 p5 input =
 -- Right (Complement (Sequence [G,G,T]),"")
 
 parseQuery :: Parser Query
-parseQuery = or5 parseConcat parseFMotif parseComplement parseTranscribe parseMutate
+parseQuery input = 
+  if take 1 input == "("
+  then case parseParenthesizedQuery input of
+         Left err -> Left err
+         Right (query, rest) -> Right (query, rest)
+  else or5 parseConcat parseFMotif parseComplement parseTranscribe parseMutate input
+
+parseParenthesizedQuery :: Parser Query
+parseParenthesizedQuery input = 
+  case parseChar '(' input of
+    Left err -> Left err
+    Right (_, rest1) -> case parseQuery rest1 of
+      Left err -> Left err
+      Right (query, rest2) -> case parseChar ')' rest2 of
+        Left err -> Left err
+        Right (_, remaining) -> Right (query, remaining)
+
+
+
+parseOperand :: Parser Operand
+parseOperand input
+  | take 1 input == "(" = 
+      case parseParenthesizedQuery input of
+        Left err -> Left err
+        Right (query, rest) -> Right (NestedQuery query, rest)
+  | otherwise = case parseNucSeq input of
+      Left err -> Left err
+      Right (nucleotides, rest) -> Right (Sequence nucleotides, rest)
 
 
 -- >>> parseQuery "mutate (concat CC (complement G)) 50"
+-- Right (Mutate (NestedQuery (Concat (Sequence [C,C]) (NestedQuery (Complement (Sequence [G]))))) 50,"")
+
+-- >>> parseQuery "complement (mutate AG 30)"
+-- Right (Complement (NestedQuery (Mutate (Sequence [A,G]) 30)),"")
 
 
--- | Represents the program state, holding the current nucleotide sequence.
+-- >>> parseQuery "mutate (complement (fmotif A (concat T (complement G)))) 15"
+-- Right (Mutate (NestedQuery (Complement (NestedQuery (FMotif (Sequence [A]) (NestedQuery (Concat (Sequence [T]) (NestedQuery (Complement (Sequence [G]))))))))) 15,"")
+
+-- >>> parseQuery "concat (mutate (fmotif CC GG) 25) (complement (transcribe T))"
+-- Right (Concat (NestedQuery (Mutate (NestedQuery (FMotif (Sequence [C,C]) (Sequence [G,G]))) 25)) (NestedQuery (Complement (NestedQuery (Transcribe (Sequence [T]))))),"")
+
+
+
+
+
 data State = State {
   nucleotideSequence :: String
 } deriving (Show, Eq)
