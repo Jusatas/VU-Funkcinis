@@ -28,8 +28,6 @@ parseChar c (h:t)
   | c == h    = Right (c, t)
   | otherwise = Left ([c] ++ " is not the first element of " ++ (h:t))
 
-
-
 parseString :: String -> Parser String
 parseString [] input = Right ([], input)
 parseString (h:t) input = 
@@ -39,8 +37,6 @@ parseString (h:t) input =
       case parseString t rest of
         Left err -> Left err
         Right (parsed, remaining) -> Right (h:parsed, remaining)
-
-
 
 -- <integer> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | <integer> <integer>
 parseInt :: Parser Integer
@@ -143,24 +139,24 @@ parseMutate input =
           Left err -> Left err
           Right (int, remaining) -> Right (Mutate (Sequence seq1) int, remaining)
 
-
-or2 :: Parser a -> Parser a -> Parser a
-or2 p1 p2 input =
-  case p1 input of
-    Right result -> Right result
-    Left _ -> p2 input
-
-or3 :: Parser a -> Parser a -> Parser a -> Parser a
-or3 p1 p2 p3 input =
+or5 :: Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a
+or5 p1 p2 p3 p4 p5 input =
   case p1 input of
     Right result -> Right result
     Left _ -> case p2 input of
       Right result -> Right result
-      Left _ -> p3 input
+      Left _ -> case p3 input of
+        Right result -> Right result
+        Left _ -> case p4 input of
+          Right result -> Right result
+          Left _ -> p5 input
 
+
+-- >>> parseQuery "complement GGT"
+-- Right (Complement (Sequence [G,G,T]),"")
 
 parseQuery :: Parser Query
-parseQuery input = or3 parseConcat parseFMotif (or3 parseComplement parseTranscribe parseMutate) input
+parseQuery = or5 parseConcat parseFMotif parseComplement parseTranscribe parseMutate
 
 
 -- >>> parseQuery "mutate (concat CC (complement G)) 50"
