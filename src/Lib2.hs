@@ -142,7 +142,6 @@ parseView input =
   else Left "Expected 'view' for ViewCommand"
 
 
-
 or6 :: Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a
 or6 p1 p2 p3 p4 p5 p6 input =
   case p1 input of
@@ -164,7 +163,7 @@ parseQuery input =
     Right (query, _) -> Right query
     Left _ -> Left "Error: command doesn't match anything from query."
 
--- Helper function to handle both regular and parenthesized queries
+-- Needed to keep recursion but allow parseQuery to return Either String Query
 parseParenthesizedOrRegularQuery :: Parser Query
 parseParenthesizedOrRegularQuery input =
   if take 1 input == "("
@@ -219,13 +218,11 @@ data State = State
   , commandHistory :: [Query]           -- History of executed commands
   } deriving (Show, Eq)
 
--- | Initial state of the program
 emptyState :: State
 emptyState = State
   { nucleotideSequence = [],
     commandHistory = []
   }
-
 
 
 viewState :: State -> String
@@ -260,7 +257,7 @@ stateTransition state query = case query of
   Concat op1 op2 ->
     case (extractSequence state op1, extractSequence state op2) of
       (Right s1, Right s2) ->
-        let newSeq = nucleotideSequence state ++ s1 ++ s2
+        let newSeq = concatSequences s1 s2
             newState = state { nucleotideSequence = newSeq, commandHistory = commandHistory state ++ [query] }
         in Right (Just "Sequences concatenated.", newState)
       (Left err, _) -> Left err
@@ -269,8 +266,10 @@ stateTransition state query = case query of
   FMotif op1 motifOp ->
     case (extractSequence state op1, extractSequence state motifOp) of
       (Right s1, Right motif) ->
-        let found = containsMotif (nucleotidesToString s1) (nucleotidesToString motif)
-            message = if found then "Motif found in sequence." else "Motif not found."
+        let index = fmotif (nucleotidesToString s1) (nucleotidesToString motif)
+            message = if index > 0
+                      then "Motif found at index: " ++ show index ++ "."
+                      else "Motif not found."
             newState = state { commandHistory = commandHistory state ++ [query] }
         in Right (Just message, newState)
       (Left err, _) -> Left err
@@ -325,6 +324,8 @@ extractSequence state (NestedQuery nestedQuery) =
 --stateTransition :: State -> Query -> Either String (Maybe String, State)
 
 
+concatSequences :: [Nucleotide] -> [Nucleotide] -> [Nucleotide]
+concatSequences seq1 seq2 = seq1 ++ seq2
 
 containsMotif :: String -> String -> Bool
 containsMotif [] _ = False
@@ -332,13 +333,6 @@ containsMotif seq1 seq2 =
   if startsWith seq1 seq2
   then True
   else containsMotif (tail seq1) seq2
-
--- >>> startsWith "ATGC" "ATG"
--- True
-startsWith :: String -> String -> Bool
-startsWith [] _ = False
-startsWith _ [] = True
-startsWith (x:xs) (y:ys) = x == y && startsWith xs ys
 
 complementSequence :: String -> Either String String
 complementSequence [] = Right []
@@ -356,7 +350,6 @@ complementNucleotide 'C' = Right 'G'
 complementNucleotide 'G' = Right 'C'
 complementNucleotide _ = Left "Error: Invalid nucleotide for complement."
 
--- Transcribes a DNA sequence (replacing 'T' with 'U' for RNA).
 transcribeSequence :: String -> String
 transcribeSequence = map transcribeNucleotide
 
@@ -370,7 +363,6 @@ mutate seq' percentage =
       (toMutate, rest) = splitAt (fromInteger numToMutate) seq'
   in map mutateNucleotide toMutate ++ rest
 
--- | Mutates a single nucleotide to another random nucleotide (simplified).
 mutateNucleotide :: Char -> Char
 mutateNucleotide 'A' = 'T'
 mutateNucleotide 'T' = 'A'
@@ -378,10 +370,25 @@ mutateNucleotide 'C' = 'G'
 mutateNucleotide 'G' = 'C'
 mutateNucleotide nucleotide = nucleotide
 
--- Returns 1 if found, 0 if not found.
 fmotif :: String -> String -> Int
 fmotif [] _ = 0  -- If sequence is empty, return 0
 fmotif _ [] = 0  -- If motif is empty, return 0
-fmotif seq1 motif
-    | startsWith seq1 motif = 1  -- Found at the start
-    | otherwise = fmotif (tail seq1) motif  -- Recursively check the rest
+fmotif seq1 motif = fmotifHelper seq1 motif 1  -- Start index at 1
+
+fmotifHelper :: String -> String -> Int -> Int
+fmotifHelper [] _ _ = 0  -- If sequence is empty, return 0
+fmotifHelper seq1 motif index
+    | startsWith seq1 motif = index  -- Found motif, return index
+    | otherwise = fmotifHelper (tail seq1) motif (index + 1)  -- Checkrest, increment index
+
+startsWith :: String -> String -> Bool
+startsWith [] _ = False
+startsWith _ [] = True
+startsWith (x:xs) (y:ys) = (x == y) && startsWith xs ys
+
+printMotifLocation :: String -> String -> IO Int
+printMotifLocation seq1 motif = do
+    let index = fmotif seq1 motif
+    if index == 0
+        then putStrLn "Motif not found." >> return 0
+        else putStrLn ("Motif found at index: " ++ show index) >> return index

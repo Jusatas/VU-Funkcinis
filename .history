@@ -1,4 +1,44 @@
 view
+mutate (concat CGT U) 50
+view
+concat U G
+view
+concat CCGGT GT
+view
+concat (complement GGGGG) CT
+view
+complement GGC
+compmlement GGC
+view
+concat UU A
+view
+concat GGGTT AAAAAAAAAAA
+concat CCGGT GTAA
+view
+mutate CCG 2
+mutate CCG
+view
+concat GGGGTT CC
+view
+concat CCGT TG
+fmotif GGTCGA QTC
+fmotif GGTCGA TC0
+fmotif GGTCGA TCv
+fmotif GGTCGA TC
+view
+concat CCGT ATG
+view
+fmotif CCGTTATAGC AG
+view
+mutate CCGG 50
+view
+show
+sho
+ag
+concat CCCG GT (
+concat CCCG GT
+view
+view
 show
 mutate (complement (fmotif A (concat T (complement G)))) 15
 concat GX
