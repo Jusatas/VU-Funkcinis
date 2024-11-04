@@ -1,9 +1,10 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module Lib2
     ( Query(..),
       parseQuery,
       State(..),
       emptyState,
-      --stateTransition
+      stateTransition
     ) where
 
 data Query = Concat Operand Operand
@@ -11,7 +12,9 @@ data Query = Concat Operand Operand
            | Complement Operand
            | Transcribe Operand
            | Mutate Operand Integer
+           | ViewCommand
            deriving (Show, Eq)
+
 
 data Operand = Sequence [Nucleotide]
              | NestedQuery Query
@@ -58,6 +61,7 @@ parseDigits acc (h:t)
   | h == '8' = parseDigits (acc * 10 + 8) t
   | h == '9' = parseDigits (acc * 10 + 9) t
   | otherwise = Right (acc, h:t)  -- Return the accumulated integer and the remaining unparsed input
+
 -- <nucleotide> ::= "A" | "T" | "C" | "G"
 parseNucleotide :: Char -> Either String Nucleotide
 parseNucleotide 'A' = Right A
@@ -66,7 +70,6 @@ parseNucleotide 'U' = Right U
 parseNucleotide 'C' = Right C
 parseNucleotide 'G' = Right G
 parseNucleotide _   = Left "Error: invalid nucleotide."
--- >>> parseNucSeq "A AG"
 
 parseNucSeq :: Parser [Nucleotide]
 parseNucSeq [] = Right ([], [])
@@ -75,12 +78,6 @@ parseNucSeq (h:t) = case parseNucleotide h of
     Right nucleotide -> case parseNucSeq t of
         Left err -> Left err
         Right (nucSeq, remainder) -> Right (nucleotide : nucSeq, remainder)
-
-
-
--- >>> parseConcat "concat AGGT GT"
--- Right (Concat (Sequence [A,G,G,T]) (Sequence [G,T]),"")
-
 
 parseConcat :: Parser Query
 parseConcat input = 
@@ -107,8 +104,6 @@ parseFMotif input =
           Left err -> Left err
           Right (op2, remaining) -> Right (FMotif op1 op2, remaining)
 
-
-
 -- <operation> ::= "complement" <operand>
 parseComplement :: Parser Query
 parseComplement input =
@@ -127,8 +122,6 @@ parseTranscribe input =
       Left err -> Left err
       Right (op, remaining) -> Right (Transcribe op, remaining)
 
-
-
 -- <operation> ::= "mutate" <operand> <percentage>
 parseMutate :: Parser Query
 parseMutate input =
@@ -142,9 +135,16 @@ parseMutate input =
           Left err -> Left err
           Right (int, remaining) -> Right (Mutate op int, remaining)
 
+parseView :: Parser Query
+parseView input =
+  if take 4 input == "view"
+  then Right (ViewCommand, drop 4 input)
+  else Left "Expected 'view' for ViewCommand"
 
-or5 :: Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a
-or5 p1 p2 p3 p4 p5 input =
+
+
+or6 :: Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a
+or6 p1 p2 p3 p4 p5 p6 input =
   case p1 input of
     Right result -> Right result
     Left _ -> case p2 input of
@@ -153,30 +153,35 @@ or5 p1 p2 p3 p4 p5 input =
         Right result -> Right result
         Left _ -> case p4 input of
           Right result -> Right result
-          Left _ -> p5 input
+          Left _ -> case p5 input of
+            Right result -> Right result
+            Left _ -> p6 input
 
 
--- >>> parseQuery "complement GGT"
--- Right (Complement (Sequence [G,G,T]),"")
-
-parseQuery :: Parser Query
+parseQuery :: String -> Either String Query
 parseQuery input = 
+  case parseParenthesizedOrRegularQuery input of
+    Right (query, _) -> Right query
+    Left _ -> Left "Error: command doesn't match anything from query."
+
+-- Helper function to handle both regular and parenthesized queries
+parseParenthesizedOrRegularQuery :: Parser Query
+parseParenthesizedOrRegularQuery input =
   if take 1 input == "("
-  then case parseParenthesizedQuery input of
-         Left err -> Left err
-         Right (query, rest) -> Right (query, rest)
-  else or5 parseConcat parseFMotif parseComplement parseTranscribe parseMutate input
+  then parseParenthesizedQuery input
+  else or6 parseConcat parseFMotif parseComplement parseTranscribe parseMutate parseView input
+
+
 
 parseParenthesizedQuery :: Parser Query
 parseParenthesizedQuery input = 
   case parseChar '(' input of
     Left err -> Left err
-    Right (_, rest1) -> case parseQuery rest1 of
+    Right (_, rest1) -> case parseParenthesizedOrRegularQuery rest1 of
       Left err -> Left err
       Right (query, rest2) -> case parseChar ')' rest2 of
         Left err -> Left err
         Right (_, remaining) -> Right (query, remaining)
-
 
 
 parseOperand :: Parser Operand
@@ -203,17 +208,123 @@ parseOperand input
 -- >>> parseQuery "concat (mutate (fmotif CC GG) 25) (complement (transcribe T))"
 -- Right (Concat (NestedQuery (Mutate (NestedQuery (FMotif (Sequence [C,C]) (Sequence [G,G]))) 25)) (NestedQuery (Complement (NestedQuery (Transcribe (Sequence [T]))))),"")
 
+-- >>> parseQuery "complement GGT"
+-- Right (Complement (Sequence [G,G,T]),"")
 
 
 
 
-data State = State {
-  nucleotideSequence :: String
-} deriving (Show, Eq)
+data State = State
+  { nucleotideSequence :: [Nucleotide]  -- Sequence of nucleotides
+  , commandHistory :: [Query]           -- History of executed commands
+  } deriving (Show, Eq)
 
--- | Initial state of the program.
+-- | Initial state of the program
 emptyState :: State
-emptyState = State { nucleotideSequence = "" }
+emptyState = State
+  { nucleotideSequence = [],
+    commandHistory = []
+  }
+
+
+
+viewState :: State -> String
+viewState state =
+  "Nucleotide Sequence: " ++ nucleotidesToString (nucleotideSequence state) ++ "\n" ++
+  "Command History:\n" ++ unlines (map show (commandHistory state))
+
+
+-- Helper function to convert Nucleotide type to Char
+nucleotideToChar :: Nucleotide -> Char
+nucleotideToChar A = 'A'
+nucleotideToChar T = 'T'
+nucleotideToChar U = 'U'
+nucleotideToChar C = 'C'
+nucleotideToChar G = 'G'
+
+charToNucleotide :: Char -> Nucleotide
+charToNucleotide 'A' = A
+charToNucleotide 'T' = T
+charToNucleotide 'U' = U
+charToNucleotide 'C' = C
+charToNucleotide 'G' = G
+charToNucleotide _   = error "Invalid nucleotide character"
+
+-- Helper function to convert a list of Nucleotides to a String
+nucleotidesToString :: [Nucleotide] -> String
+nucleotidesToString = map nucleotideToChar
+
+-- State transition function
+stateTransition :: State -> Query -> Either String (Maybe String, State)
+stateTransition state query = case query of
+  Concat op1 op2 ->
+    case (extractSequence state op1, extractSequence state op2) of
+      (Right s1, Right s2) ->
+        let newSeq = nucleotideSequence state ++ s1 ++ s2
+            newState = state { nucleotideSequence = newSeq, commandHistory = commandHistory state ++ [query] }
+        in Right (Just "Sequences concatenated.", newState)
+      (Left err, _) -> Left err
+      (_, Left err) -> Left err
+
+  FMotif op1 motifOp ->
+    case (extractSequence state op1, extractSequence state motifOp) of
+      (Right s1, Right motif) ->
+        let found = containsMotif (nucleotidesToString s1) (nucleotidesToString motif)
+            message = if found then "Motif found in sequence." else "Motif not found."
+            newState = state { commandHistory = commandHistory state ++ [query] }
+        in Right (Just message, newState)
+      (Left err, _) -> Left err
+      (_, Left err) -> Left err
+
+  Complement op ->
+    case extractSequence state op of
+      Right seq' ->
+        case complementSequence (nucleotidesToString seq') of
+          Left err -> Left err
+          Right complemented ->
+            let newState = state { nucleotideSequence = map charToNucleotide complemented, commandHistory = commandHistory state ++ [query] }
+            in Right (Just "Sequence complemented.", newState)
+      Left err -> Left err
+
+  Transcribe op ->
+    case extractSequence state op of
+      Right seq' ->
+        let transcribed = map charToNucleotide (transcribeSequence (nucleotidesToString seq'))
+            newState = state { nucleotideSequence = transcribed, commandHistory = commandHistory state ++ [query] }
+        in Right (Just "Sequence transcribed to RNA.", newState)
+      Left err -> Left err
+
+  Mutate op percentage ->
+    case extractSequence state op of
+      Right seq' ->
+        let mutated = map charToNucleotide (mutate (nucleotidesToString seq') percentage)
+            newState = state { nucleotideSequence = mutated, commandHistory = commandHistory state ++ [query] }
+        in Right (Just "Sequence mutated.", newState)
+      Left err -> Left err
+
+  ViewCommand ->
+    Right (Just $ "Current State:\n" ++ viewState state, state)
+
+-- Helper function to extract sequences from operands
+extractSequence :: State -> Operand -> Either String [Nucleotide]
+extractSequence _ (Sequence s) = Right s
+extractSequence state (NestedQuery nestedQuery) = 
+  case stateTransition state nestedQuery of
+    Left err -> Left err
+    Right (_, newState) -> Right (nucleotideSequence newState)
+
+
+-- | Test for stateTransition function
+-- >>> let initState = State { nucleotideSequence = [A, T, G], commandHistory = [] }
+-- >>> stateTransition initState (Concat (Sequence [C, G]) (Sequence [T, A]))
+-- Right (Just "Sequences concatenated.",State {nucleotideSequence = [A,T,G,C,G,T,A], commandHistory = [Concat (Sequence [C,G]) (Sequence [T,A])]})
+
+
+
+-- Right (Just "Sequences concatenated.", State {nucleotideSequence = [A, T, G, C, G, T, A], commandHistory = [Concat (Sequence [C, G]) (Sequence [T, A])]})
+--stateTransition :: State -> Query -> Either String (Maybe String, State)
+
+
 
 containsMotif :: String -> String -> Bool
 containsMotif [] _ = False
@@ -274,9 +385,3 @@ fmotif _ [] = 0  -- If motif is empty, return 0
 fmotif seq1 motif
     | startsWith seq1 motif = 1  -- Found at the start
     | otherwise = fmotif (tail seq1) motif  -- Recursively check the rest
-  where
-    -- Check if seq1 starts with the motif
-    startsWith :: String -> String -> Bool
-    startsWith [] _ = False
-    startsWith _ [] = True
-    startsWith (x:xs) (y:ys) = (x == y) && startsWith xs ys

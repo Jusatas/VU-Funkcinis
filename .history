@@ -1,0 +1,14 @@
+view
+show
+mutate (complement (fmotif A (concat T (complement G)))) 15
+concat GX
+concat GGTT CT
+:q
+:q
+q:
+view
+complement GGT
+view
+fmotif GGGCGTGC GT
+view
+mutate (concat CC (complement G)) 50
