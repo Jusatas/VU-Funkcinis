@@ -79,61 +79,41 @@ parseNucSeq (h:t) = case parseNucleotide h of
         Left err -> Left err
         Right (nucSeq, remainder) -> Right (nucleotide : nucSeq, remainder)
 
+-- <operation> ::= "concat" <operand> <operand>
 parseConcat :: Parser Query
 parseConcat input = 
-  case parseString "concat " input of
+  case and4 (parseString "concat ") parseOperand (parseChar ' ') parseOperand input of
     Left err -> Left err
-    Right (_, rest1) -> case parseOperand rest1 of
-      Left err -> Left err
-      Right (op1, rest2) -> case parseChar ' ' rest2 of
-        Left err -> Left err
-        Right (_, rest3) -> case parseOperand rest3 of
-          Left err -> Left err
-          Right (op2, remaining) -> Right (Concat op1 op2, remaining)
+    Right ((_, op1, _, op2), remaining) -> Right (Concat op1 op2, remaining)
 
 -- <operation> ::= "fmotif" <operand> <operand>
 parseFMotif :: Parser Query
 parseFMotif input =
-  case parseString "fmotif " input of
+  case and4 (parseString "fmotif ") parseOperand (parseChar ' ') parseOperand input of
     Left err -> Left err
-    Right (_, rest1) -> case parseOperand rest1 of
-      Left err -> Left err
-      Right (op1, rest2) -> case parseChar ' ' rest2 of
-        Left err -> Left err
-        Right (_, rest3) -> case parseOperand rest3 of
-          Left err -> Left err
-          Right (op2, remaining) -> Right (FMotif op1 op2, remaining)
+    Right ((_, op1, _, op2), remaining) -> Right (FMotif op1 op2, remaining)
 
 -- <operation> ::= "complement" <operand>
 parseComplement :: Parser Query
 parseComplement input =
-  case parseString "complement " input of
+  case and2 (parseString "complement ") parseOperand input of
     Left err -> Left err
-    Right (_, rest) -> case parseOperand rest of
-      Left err -> Left err
-      Right (op, remaining) -> Right (Complement op, remaining)
+    Right ((_, op), remaining) -> Right (Complement op, remaining)
 
 -- <operation> ::= "transcribe" <operand>
 parseTranscribe :: Parser Query
 parseTranscribe input =
-  case parseString "transcribe " input of
+  case and2 (parseString "transcribe ") parseOperand input of
     Left err -> Left err
-    Right (_, rest) -> case parseOperand rest of
-      Left err -> Left err
-      Right (op, remaining) -> Right (Transcribe op, remaining)
+    Right ((_, op), remaining) -> Right (Transcribe op, remaining)
 
 -- <operation> ::= "mutate" <operand> <percentage>
 parseMutate :: Parser Query
 parseMutate input =
-  case parseString "mutate " input of
+  case and4 (parseString "mutate ") parseOperand (parseChar ' ') parseInt input of
     Left err -> Left err
-    Right (_, rest1) -> case parseOperand rest1 of
-      Left err -> Left err
-      Right (op, rest2) -> case parseString " " rest2 of
-        Left err -> Left err
-        Right (_, rest3) -> case parseInt rest3 of
-          Left err -> Left err
-          Right (int, remaining) -> Right (Mutate op int, remaining)
+    Right ((_, op, _, int), remaining) -> Right (Mutate op int, remaining)
+
 
 parseView :: Parser Query
 parseView input =
@@ -141,6 +121,55 @@ parseView input =
   then Right (ViewCommand, drop 4 input)
   else Left "Expected 'view' for ViewCommand"
 
+and2 :: Parser a -> Parser b -> Parser (a, b)
+and2 p1 p2 input = 
+  case p1 input of
+    Left err -> Left err
+    Right (result1, rest) -> 
+      case p2 rest of
+        Left err -> Left err
+        Right (result2, remaining) -> Right ((result1, result2), remaining)
+
+and3 :: Parser a -> Parser b -> Parser c -> Parser (a, b, c)
+and3 p1 p2 p3 input = 
+  case p1 input of
+    Left err -> Left err
+    Right (result1, rest1) -> 
+      case p2 rest1 of
+        Left err -> Left err
+        Right (result2, rest2) -> 
+          case p3 rest2 of
+            Left err -> Left err
+            Right (result3, remaining) -> Right ((result1, result2, result3), remaining)
+
+and4 :: Parser a -> Parser b -> Parser c -> Parser d -> Parser (a, b, c, d)
+and4 p1 p2 p3 p4 input =
+  case p1 input of
+    Left err -> Left err
+    Right (result1, rest1) ->
+      case p2 rest1 of
+        Left err -> Left err
+        Right (result2, rest2) ->
+          case p3 rest2 of
+            Left err -> Left err
+            Right (result3, rest3) ->
+              case p4 rest3 of
+                Left err -> Left err
+                Right (result4, remaining) -> Right ((result1, result2, result3, result4), remaining)
+
+or2 :: Parser a -> Parser a -> Parser a
+or2 p1 p2 input = 
+  case p1 input of
+    Right result -> Right result
+    Left _ -> p2 input
+
+or3 :: Parser a -> Parser a -> Parser a -> Parser a
+or3 p1 p2 p3 input = 
+  case p1 input of
+    Right result -> Right result
+    Left _ -> case p2 input of
+      Right result -> Right result
+      Left _ -> p3 input
 
 or6 :: Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a
 or6 p1 p2 p3 p4 p5 p6 input =
@@ -204,7 +233,7 @@ parseOperand input
 -- >>> parseQuery "mutate (complement (fmotif A (concat T (complement G)))) 15"
 -- Right (Mutate (NestedQuery (Complement (NestedQuery (FMotif (Sequence [A]) (NestedQuery (Concat (Sequence [T]) (NestedQuery (Complement (Sequence [G]))))))))) 15,"")
 
--- >>> parseQuery "concat (mutate (fmotif CC GG) 25) (complement (transcribe T))"
+-- >>> parseQuery "concat (mutate (transcribe GG) 25) (complement (transcribe T))"
 -- Right (Concat (NestedQuery (Mutate (NestedQuery (FMotif (Sequence [C,C]) (Sequence [G,G]))) 25)) (NestedQuery (Complement (NestedQuery (Transcribe (Sequence [T]))))),"")
 
 -- >>> parseQuery "complement GGT"
@@ -348,6 +377,7 @@ complementNucleotide 'A' = Right 'T'
 complementNucleotide 'T' = Right 'A'
 complementNucleotide 'C' = Right 'G'
 complementNucleotide 'G' = Right 'C'
+complementNucleotide 'U' = Right 'A'
 complementNucleotide _ = Left "Error: Invalid nucleotide for complement."
 
 transcribeSequence :: String -> String

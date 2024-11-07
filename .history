@@ -1,4 +1,21 @@
 view
+concat (mutate (transcribe GG) 25) (complement (transcribe G))
+concat (mutate (transcribe GG) 25) (complement (transcribe T))
+concat (mutate (transcribe GG) 25) (complement (transcribe T))
+view
+concat (mutate (fmotif CC GG) 25) (complement (transcribe T))
+concat (mutate (fmotif CC GG) 25) (complement (transcribe T))
+mutate (complement (fmotif A (concat T (complement G)))) 1
+concat (mutate (fmotif CC GG) 25) (complement (transcribe T))
+view
+complement (mutate AG 30)
+view
+concat CCGT GT
+q
+view
+show
+complement X
+view
 mutate (concat CGT U) 50
 view
 concat U G
