@@ -1,4 +1,27 @@
 view
+createSeq GGCT seq1
+createSeq GGXT c
+createSeq GGXT seq1
+createSeq 5a8
+createSeq 5a
+createSeqx
+createSeq CCG justas
+view
+createSeq GGC justas
+view
+createSeq GGTTGA labas
+q
+view
+createSeq GGGTT er
+deleteSeq justas
+createSeq CGT justas
+deleteSeq justas
+deleteSeq CGT
+view
+createSeq CGT justas
+createSeq a
+deleteSeq x
+view
 concat (mutate (transcribe GG) 25) (complement (transcribe G))
 concat (mutate (transcribe GG) 25) (complement (transcribe T))
 concat (mutate (transcribe GG) 25) (complement (transcribe T))
