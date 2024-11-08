@@ -1,4 +1,18 @@
 view
+deleteSeq justas
+deleteSeq justas
+deleteSeq justas
+view
+deleteSeq justas
+view
+createSeq GGCTA justas
+view
+createSeq GGCT justas
+view
+createSeq GGCT justasaas
+view
+createSeq GGCT justas
+view
 deleteSeq nobas
 delete
 deleteseq nobas
@@ -84,17 +98,3 @@ concat CCGGT GTAA
 view
 mutate CCG 2
 mutate CCG
-view
-concat GGGGTT CC
-view
-concat CCGT TG
-fmotif GGTCGA QTC
-fmotif GGTCGA TC0
-fmotif GGTCGA TCv
-fmotif GGTCGA TC
-view
-concat CCGT ATG
-view
-fmotif CCGTTATAGC AG
-view
-mutate CCGG 50

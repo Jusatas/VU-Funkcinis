@@ -399,12 +399,23 @@ stateTransition state query = case query of
     in Right (Just ("Sequence " ++ name ++ " created."), newState)
   
   DeleteSeq name ->
-    let newNamedSequences = filter (\(n, _) -> n /= name) (namedSequences state)
+    let
+    removeSequence [] = []
+    removeSequence ((n, seq):xs) =
+      if n == name
+      then xs  -- Skip this item to remove it
+      else (n, seq) : removeSequence xs  -- Keep the item and continue
+
+    -- Get the new list of named sequences
+    newNamedSequences = removeSequence (namedSequences state)
+
+    -- Check if the sequence was actually found and removed
     in if length newNamedSequences == length (namedSequences state)
-       then Left ("Error: Sequence " ++ name ++ " not found.")
-       else
-         let newState = state { namedSequences = newNamedSequences, commandHistory = commandHistory state ++ [query] }
-         in Right (Just ("Sequence " ++ name ++ " deleted."), newState)
+     then Left ("Error: Sequence " ++ name ++ " not found.")
+     else
+       let newState = state { namedSequences = newNamedSequences, commandHistory = commandHistory state ++ [query] }
+       in Right (Just ("Sequence " ++ name ++ " deleted."), newState)
+
 
   
 
