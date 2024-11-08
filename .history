@@ -1,4 +1,31 @@
 view
+deleteSeq nobas
+delete
+deleteseq nobas
+view
+createSeq CTG nobas
+createSeq CCCGGaTG jusaaatas
+createSeq CCCGGTG justas
+view
+concat CCGT T
+view
+concat CCGT T
+view
+view
+deleteSeq justas
+view
+deleteSeq justas
+view
+delete justas
+view
+createSeq AGGTTTAGAGACCCGTTUUUU justas
+view
+view
+complement (mutate AG 30)
+view
+complement (mutate AG 30)
+"complement (mutate AG 30)
+view
 createSeq GGCT seq1
 createSeq GGXT c
 createSeq GGXT seq1
@@ -71,24 +98,3 @@ view
 fmotif CCGTTATAGC AG
 view
 mutate CCGG 50
-view
-show
-sho
-ag
-concat CCCG GT (
-concat CCCG GT
-view
-view
-show
-mutate (complement (fmotif A (concat T (complement G)))) 15
-concat GX
-concat GGTT CT
-:q
-:q
-q:
-view
-complement GGT
-view
-fmotif GGGCGTGC GT
-view
-mutate (concat CC (complement G)) 50

@@ -266,16 +266,11 @@ parseName input = Right (input, "")
 --        Right (name, remaining') -> Right (CreateSeq nucleotideSeq name, remaining')
 
 
-
-
-
 parseDeleteSeq :: Parser Query
 parseDeleteSeq input =
-  case and2 (parseString "deleteSeq ") (parseString "") input of
+  case and2 (parseString "deleteSeq ") parseName input of
     Left err -> Left err
     Right ((_, name), remaining) -> Right (DeleteSeq name, remaining)
-
-
 
 
 
@@ -311,9 +306,11 @@ emptyState = State
 
 viewState :: State -> String
 viewState state =
+  "------------------------------------------------------------------\n" ++
   "Nucleotide Sequence: " ++ nucleotidesToString (nucleotideSequence state) ++ "\n" ++
+  "Saved Sequences:\n" ++ formatNamedSequences (namedSequences state)  ++ "\n\n" ++
   "Command History:\n" ++ unlines (map show (commandHistory state)) ++
-  "Saved Sequences:\n" ++ formatNamedSequences (namedSequences state)
+  "------------------------------------------------------------------\n"
 
 -- Helper function to format named sequences for display
 formatNamedSequences :: [(String, [Nucleotide])] -> String
