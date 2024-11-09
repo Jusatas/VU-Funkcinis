@@ -209,41 +209,38 @@ or8 p1 p2 p3 p4 p5 p6 p7 p8 input =
 
 parseQuery :: String -> Either String Query
 parseQuery input = 
-  case parseParenthesizedOrRegularQuery input of
+  case parseAnyQuery input of
     Right (query, _) -> Right query
     Left _ -> Left "Error: command doesn't match anything from query."
 
--- Needed to keep recursion but allow parseQuery to return Either String Query
-parseParenthesizedOrRegularQuery :: Parser Query
-parseParenthesizedOrRegularQuery input =
-  if take 1 input == "("
-  then parseParenthesizedQuery input
-  else or8 parseConcat parseFMotif parseComplement parseTranscribe parseMutate parseView parseCreateSeq parseDeleteSeq input
-
-
-
+-- parses regular and parenthesized queries
+parseAnyQuery :: Parser Query
+parseAnyQuery ('(':rest) = parseParenthesizedQuery ('(':rest)
+parseAnyQuery input = 
+  or8 parseConcat parseFMotif parseComplement parseTranscribe parseMutate parseView parseCreateSeq parseDeleteSeq input
 
 parseParenthesizedQuery :: Parser Query
 parseParenthesizedQuery input = 
   case parseChar '(' input of
     Left err -> Left err
-    Right (_, rest1) -> case parseParenthesizedOrRegularQuery rest1 of
+    Right (_, rest1) -> case parseAnyQuery rest1 of
       Left err -> Left err
       Right (query, rest2) -> case parseChar ')' rest2 of
         Left err -> Left err
         Right (_, remaining) -> Right (query, remaining)
 
-
 parseOperand :: Parser Operand
-parseOperand input
-  | take 1 input == "(" = 
-      case parseParenthesizedQuery input of
-        Left err -> Left err
-        Right (query, rest) -> Right (NestedQuery query, rest)
-  | otherwise = case parseNucSeq input of
-      Left err -> Left err
-      Right (nucleotides, rest) -> Right (Sequence nucleotides, rest) 
+parseOperand ('(':rest) = 
+  case parseParenthesizedQuery ('(':rest) of
+    Left err -> Left err
+    Right (query, rest) -> Right (NestedQuery query, rest)
+parseOperand input = 
+  case parseNucSeq input of
+    Left err -> Left err
+    Right (nucleotides, rest) -> Right (Sequence nucleotides, rest)
 
+
+--TODO: look if the operand matches any of the named sequences, if yes, then use that as a sequence.
 parseCreateSeq :: String -> Either String (Query, String)
 parseCreateSeq input =
   case and4 (parseString "createSeq ") parseNucSeq (parseString " ") parseName input of
@@ -277,12 +274,15 @@ parseDeleteSeq input =
 -- >>> parseQuery "mutate (concat CC (complement G)) 50"
 
 -- >>> parseQuery "complement (mutate AG 30)"
+
 -- Right (Complement (NestedQuery (Mutate (Sequence [A,G]) 30)))
 
 -- >>> parseQuery "mutate (complement (fmotif A (concat T (complement G)))) 15"
+
 -- Right (Mutate (NestedQuery (Complement (NestedQuery (FMotif (Sequence [A]) (NestedQuery (Concat (Sequence [T]) (NestedQuery (Complement (Sequence [G]))))))))) 15)
 
 -- >>> parseQuery "concat (mutate (transcribe GG) 25) (complement (transcribe T))"
+
 -- Right (Concat (NestedQuery (Mutate (NestedQuery (Transcribe (Sequence [G,G]))) 25)) (NestedQuery (Complement (NestedQuery (Transcribe (Sequence [T]))))))
 
 

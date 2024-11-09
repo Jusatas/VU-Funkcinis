@@ -1,4 +1,14 @@
 view
+concat (complement GGG) (mutate G 100)
+view
+concat (complement GGG) G
+concat (transcribe CC)
+view
+concat (complement GT) (transcribe CC)
+view
+concat CGT T
+view
+view
 deleteSeq justas
 deleteSeq justas
 deleteSeq justas
@@ -88,13 +98,3 @@ concat CCGGT GT
 view
 concat (complement GGGGG) CT
 view
-complement GGC
-compmlement GGC
-view
-concat UU A
-view
-concat GGGTT AAAAAAAAAAA
-concat CCGGT GTAA
-view
-mutate CCG 2
-mutate CCG
