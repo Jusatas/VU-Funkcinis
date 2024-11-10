@@ -9,8 +9,6 @@ genetic code. This REPL program helps with such tasks.
 
 - **Nucleotides**: Represented by the letters A (adenine), T (thymine), C (cytosine), and G (guanine).
 - **Sequence**: A string of nucleotides (e.g., "ATCG").
-- **Chromosome**: A collection of sequences (e.g., "ATCG" "GCTA").
-- **Genome**: A collection of chromosomes (e.g., "ATCG" "GCTA" "CGTA").
 
 ## Operations
 
@@ -29,6 +27,12 @@ genetic code. This REPL program helps with such tasks.
 - **Mutate**: Takes a sequence and a percentage to randomly change that percentage of nucleotides.\
   Example: `mutate ATC 30` could result in `ATG`.
 
+- **CreateSeq**: Allows the user to create named sequences for use later.\
+  Example: `createseq GGT mySeq1`
+
+- **DeleteSeq**: Allows the user to create named sequences for use later.\
+  Example: `deleteseq mySeq1`
+
 ## Combining Commands
 
 Commands can be combined to perform more complex operations.\
@@ -40,6 +44,7 @@ Example: `fmotif (concat ATCG GCTA) TCG` finds the motif TCG in ATCGGCTA.
 <nucleotide> ::= "A" | "T" | "C" | "G"
 <sequence> ::= <nucleotide> | <nucleotide> <sequence>
 
+<string> ::= <character> <string> | <character>
 <integer> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | <integer> <integer>
 <percentage> ::= <integer>
  
@@ -49,4 +54,16 @@ Example: `fmotif (concat ATCG GCTA) TCG` finds the motif TCG in ATCGGCTA.
               | "complement" <operand>
               | "transcribe" <operand>
               | "mutate" <operand> <percentage>
+              | "createSeq" <operand> <string>
+              | "deleteSeq" <string>
+              | "view"
+<nestedoperation> ::= "(" <operation> ")"
+
+<character> ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" |
+  "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" |
+  "y" | "z" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" |
+  "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" |
+  "Y" | "Z" | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "_" |
+  "-" | "."
+
 

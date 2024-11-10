@@ -120,7 +120,26 @@ parseMutate input =
     Left err -> Left err
     Right ((_, op, _, int), remaining) -> Right (Mutate op int, remaining)
 
+-- <operation> ::= "deleteSeq" <string>
+parseDeleteSeq :: Parser Query
+parseDeleteSeq input =
+  case and2 (parseString "deleteSeq ") parseName input of
+    Left err -> Left err
+    Right ((_, name), remaining) -> Right (DeleteSeq name, remaining)
 
+-- <operation> ::= "createSeq" <operand> <string>
+parseCreateSeq :: String -> Either String (Query, String)
+parseCreateSeq input =
+  case and4 (parseString "createSeq ") parseNucSeq (parseString " ") parseName input of
+    Left err -> Left err
+    Right ((_, nucleotideSeq, _, name), remaining) -> Right (CreateSeq nucleotideSeq name, remaining)
+
+parseName :: Parser String
+parseName "" = Left "Error: Missing name."
+parseName input = Right (input, "")
+
+
+-- <operation> ::= "view"
 parseView :: Parser Query
 parseView input =
   if take 4 input == "view"
@@ -274,61 +293,10 @@ parseAlphaNumString input = parseAlphaNum [] input
 
     isAlphaNum c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 
-
---TODO: look if the operand matches any of the named sequences, if yes, then use that as a sequence.
-parseCreateSeq :: String -> Either String (Query, String)
-parseCreateSeq input =
-  case and4 (parseString "createSeq ") parseNucSeq (parseString " ") parseName input of
-    Left err -> Left err
-    Right ((_, nucleotideSeq, _, name), remaining) -> Right (CreateSeq nucleotideSeq name, remaining)
-
-parseName :: Parser String
-parseName "" = Left "Error: Missing name."
-parseName input = Right (input, "")
-
-
-
-
---parseCreateSeq input =
---  case and3 (parseString "createSeq ") parseNucSeq (parseString " ") input of
---    Left err -> Left err
---    Right ((_, nucleotideSeq, _), remaining) -> 
---      case parseString "" remaining of
---        Left err -> Left err
---        Right (name, remaining') -> Right (CreateSeq nucleotideSeq name, remaining')
-
-
-parseDeleteSeq :: Parser Query
-parseDeleteSeq input =
-  case and2 (parseString "deleteSeq ") parseName input of
-    Left err -> Left err
-    Right ((_, name), remaining) -> Right (DeleteSeq name, remaining)
-
-
-
--- >>> parseQuery "mutate (concat CC (complement G)) 50"
-
--- >>> parseQuery "complement (mutate AG 30)"
-
--- Right (Complement (NestedQuery (Mutate (Sequence [A,G]) 30)))
-
--- >>> parseQuery "mutate (complement (fmotif A (concat T (complement G)))) 15"
-
--- Right (Mutate (NestedQuery (Complement (NestedQuery (FMotif (Sequence [A]) (NestedQuery (Concat (Sequence [T]) (NestedQuery (Complement (Sequence [G]))))))))) 15)
-
--- >>> parseQuery "concat (mutate (transcribe GG) 25) (complement (transcribe T))"
-
--- Right (Concat (NestedQuery (Mutate (NestedQuery (Transcribe (Sequence [G,G]))) 25)) (NestedQuery (Complement (NestedQuery (Transcribe (Sequence [T]))))))
-
-
--- >>> parseQuery "complement GGT"
--- Right (Complement (Sequence [G,G,T]))
-
-
 data State = State {
   nucleotideSequence :: [Nucleotide],
   commandHistory :: [Query],
-  namedSequences :: [(String, [Nucleotide])]  -- New field for named sequences
+  namedSequences :: [(String, [Nucleotide])]
 } deriving (Show, Eq)
 
 emptyState :: State
@@ -342,8 +310,8 @@ emptyState = State
 viewState :: State -> String
 viewState state =
   "------------------------------------------------------------------\n" ++
-  "Nucleotide Sequence: " ++ nucleotidesToString (nucleotideSequence state) ++ "\n" ++
-  "Saved Sequences:\n" ++ formatNamedSequences (namedSequences state)  ++ "\n\n" ++
+  "Nucleotide Sequence: " ++ nucleotidesToString (nucleotideSequence state) ++ "\n\n" ++
+  "Saved Sequences:\n" ++ formatNamedSequences (namedSequences state)  ++ "\n\n\n" ++
   "Command History:\n" ++ unlines (map show (commandHistory state)) ++
   "------------------------------------------------------------------\n"
 
@@ -371,11 +339,9 @@ charToNucleotide 'C' = C
 charToNucleotide 'G' = G
 charToNucleotide _   = error "Invalid nucleotide character"
 
--- Helper function to convert a list of Nucleotides to a String
 nucleotidesToString :: [Nucleotide] -> String
 nucleotidesToString = map nucleotideToChar
 
--- State transition function
 stateTransition :: State -> Query -> Either String (Maybe String, State)
 stateTransition state query = case query of
   Concat op1 op2 ->
@@ -426,7 +392,7 @@ stateTransition state query = case query of
       Left err -> Left err
 
   ViewCommand ->
-    Right (Just $ "Current State:\n" ++ viewState state, state)
+    Right (Just $ "\nCurrent State:\n" ++ viewState state, state)
 
   CreateSeq sequence name ->
     let newNamedSequences = (name, sequence) : namedSequences state
@@ -465,18 +431,6 @@ extractSequence state (NamedSequence name) =
   case lookup name (namedSequences state) of
     Nothing -> Left $ "Error: Sequence '" ++ name ++ "' not found."
     Just seq -> Right seq
-
-
--- | Test for stateTransition function
--- >>> let initState = State { nucleotideSequence = [A, T, G], commandHistory = [] }
--- >>> stateTransition initState (Concat (Sequence [C, G]) (Sequence [T, A]))
--- Right (Just "Sequences concatenated.",State {nucleotideSequence = [A,T,G,C,G,T,A], commandHistory = [Concat (Sequence [C,G]) (Sequence [T,A])]})
-
-
-
--- Right (Just "Sequences concatenated.", State {nucleotideSequence = [A, T, G, C, G, T, A], commandHistory = [Concat (Sequence [C, G]) (Sequence [T, A])]})
---stateTransition :: State -> Query -> Either String (Maybe String, State)
-
 
 concatSequences :: [Nucleotide] -> [Nucleotide] -> [Nucleotide]
 concatSequences seq1 seq2 = seq1 ++ seq2

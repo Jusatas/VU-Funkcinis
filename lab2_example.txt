@@ -1,0 +1,120 @@
+Welcome! Press [TAB] for auto completion.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence: 
+
+Saved Sequences:
+No saved sequences.
+
+
+Command History:
+------------------------------------------------------------------
+
+>>> concat GGT C
+Sequences concatenated.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence: GGTC
+
+Saved Sequences:
+No saved sequences.
+
+
+Command History:
+Concat (Sequence [G,G,T]) (Sequence [C])
+------------------------------------------------------------------
+
+>>> createSeq TA seq1
+Sequence seq1 created.
+>>> createSeq GGG seq2
+Sequence seq2 created.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence: GGTC
+
+Saved Sequences:
+seq2: GGG
+seq1: TA
+
+
+
+Command History:
+Concat (Sequence [G,G,T]) (Sequence [C])
+CreateSeq [T,A] "seq1"
+CreateSeq [G,G,G] "seq2"
+------------------------------------------------------------------
+
+>>> mutate (concat (complement G) seq2) 100
+Sequence mutated.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence: GCCC
+
+Saved Sequences:
+seq2: GGG
+seq1: TA
+
+
+
+Command History:
+Concat (Sequence [G,G,T]) (Sequence [C])
+CreateSeq [T,A] "seq1"
+CreateSeq [G,G,G] "seq2"
+Mutate (NestedQuery (Concat (NestedQuery (Complement (Sequence [G]))) (NamedSequence "seq2"))) 100
+------------------------------------------------------------------
+
+>>> deleteSeq seq2
+Sequence seq2 deleted.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence: GCCC
+
+Saved Sequences:
+seq1: TA
+
+
+
+Command History:
+Concat (Sequence [G,G,T]) (Sequence [C])
+CreateSeq [T,A] "seq1"
+CreateSeq [G,G,G] "seq2"
+Mutate (NestedQuery (Concat (NestedQuery (Complement (Sequence [G]))) (NamedSequence "seq2"))) 100
+DeleteSeq "seq2"
+------------------------------------------------------------------
+
+>>> concat XGTTC CG
+ERROR:Error: Sequence 'XGTTC' not found.
+>>> fmotif CGTCTCGAAGTCGTTUUUUC GAAG
+Motif found at index: 7.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence: GCCC
+
+Saved Sequences:
+seq1: TA
+
+
+
+Command History:
+Concat (Sequence [G,G,T]) (Sequence [C])
+CreateSeq [T,A] "seq1"
+CreateSeq [G,G,G] "seq2"
+Mutate (NestedQuery (Concat (NestedQuery (Complement (Sequence [G]))) (NamedSequence "seq2"))) 100
+DeleteSeq "seq2"
+FMotif (Sequence [C,G,T,C,T,C,G,A,A,G,T,C,G,T,T,U,U,U,U,C]) (Sequence [G,A,A,G])
+------------------------------------------------------------------
+
+>>> 
+Goodbye!

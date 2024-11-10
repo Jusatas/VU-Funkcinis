@@ -1,4 +1,20 @@
 view
+fmotif CGTCTCGAAGTCGTTUUUUC GAAG
+concat XGTTC CG
+view
+deleteSeq seq2
+view
+mutate (concat (complement G) seq2) 100
+view
+createSeq GGG seq2
+createSeq TA seq1
+view
+concat GGT C
+view
+view
+concat CGT A
+view
+view
 concat (complement GGG) (mutate G 100)
 view
 concat (complement GGG) G
@@ -81,20 +97,4 @@ concat (mutate (fmotif CC GG) 25) (complement (transcribe T))
 concat (mutate (fmotif CC GG) 25) (complement (transcribe T))
 mutate (complement (fmotif A (concat T (complement G)))) 1
 concat (mutate (fmotif CC GG) 25) (complement (transcribe T))
-view
-complement (mutate AG 30)
-view
-concat CCGT GT
-q
-view
-show
-complement X
-view
-mutate (concat CGT U) 50
-view
-concat U G
-view
-concat CCGGT GT
-view
-concat (complement GGGGG) CT
 view
