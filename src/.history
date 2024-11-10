@@ -1,0 +1,38 @@
+complement XYZ
+view
+concat G seq1
+view
+concat seq1 seq1
+view
+createSeq GGTTA seq1
+view
+mutate (concat justas justas) 50
+view
+mutate justas 50
+view
+complement justas
+view
+concat justas T
+view
+createSeq AAAA justas
+view
+concat G (complement U)
+view
+concat CGT C
+view
+view
+complement justas
+complement G
+view
+concat justas justas
+concat justas G
+createSeq CGT justas
+concat CGT T
+view
+concat justas G
+view
+createSeq A justas
+view
+concat x GT
+concat GT T
+view
