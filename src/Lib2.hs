@@ -1,10 +1,12 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module Lib2
-    ( Query(..),
-      parseQuery,
-      State(..),
-      emptyState,
-      stateTransition
+    ( Query(..)
+    , Operand(..)
+    , Nucleotide(..)
+    , parseQuery
+    , State(..)
+    , emptyState
+    , stateTransition
     ) where
 
 data Query = Concat Operand Operand
@@ -21,6 +23,7 @@ data Query = Concat Operand Operand
 
 data Operand = Sequence [Nucleotide]
              | NestedQuery Query
+             | NamedSequence String
              deriving (Show, Eq)
 
 
@@ -236,8 +239,40 @@ parseOperand ('(':rest) =
     Right (query, rest) -> Right (NestedQuery query, rest)
 parseOperand input = 
   case parseNucSeq input of
+    Right ([], rest) -> -- If no nucleotides were parsed, try parsing as a name
+      case parseAlphaNumString input of
+        Left err -> Left err
+        Right (name, remaining) -> Right (NamedSequence name, remaining)
+    Right (nucleotides, rest) -> Right (Sequence nucleotides, rest)
+    Left _ -> -- If nucleotide parsing fails, try parsing as a name
+      case parseAlphaNumString input of
+        Left err -> Left err
+        Right (name, remaining) -> Right (NamedSequence name, remaining)
+
+parseNamedOperand :: Parser Operand
+parseNamedOperand input = 
+  case parseAlphaNumString input of
+    Left err -> Left err
+    Right (name, rest) -> Right (NamedSequence name, rest)
+
+parseNucleotideOperand :: Parser Operand
+parseNucleotideOperand input =
+  case parseNucSeq input of
     Left err -> Left err
     Right (nucleotides, rest) -> Right (Sequence nucleotides, rest)
+
+-- New helper to parse alphanumeric strings (for sequence names)
+parseAlphaNumString :: Parser String
+parseAlphaNumString [] = Left "Error: Empty input for sequence name"
+parseAlphaNumString input = parseAlphaNum [] input
+  where
+    parseAlphaNum acc (c:cs)
+      | isAlphaNum c = parseAlphaNum (acc ++ [c]) cs
+      | null acc = Left "Error: Invalid sequence name"
+      | otherwise = Right (acc, c:cs)
+    parseAlphaNum acc [] = Right (acc, [])
+
+    isAlphaNum c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 
 
 --TODO: look if the operand matches any of the named sequences, if yes, then use that as a sequence.
@@ -426,6 +461,10 @@ extractSequence state (NestedQuery nestedQuery) =
   case stateTransition state nestedQuery of
     Left err -> Left err
     Right (_, newState) -> Right (nucleotideSequence newState)
+extractSequence state (NamedSequence name) =
+  case lookup name (namedSequences state) of
+    Nothing -> Left $ "Error: Sequence '" ++ name ++ "' not found."
+    Just seq -> Right seq
 
 
 -- | Test for stateTransition function
