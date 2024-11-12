@@ -40,10 +40,10 @@ parseChar c (h:t)
 
 parseString :: String -> Parser String
 parseString [] input = Right ([], input)
-parseString (h:t) input = 
+parseString (h:t) input =
   case parseChar h input of
     Left err -> Left err
-    Right (_, rest) -> 
+    Right (_, rest) ->
       case parseString t rest of
         Left err -> Left err
         Right (parsed, remaining) -> Right (h:parsed, remaining)
@@ -87,7 +87,7 @@ parseNucSeq (h:t) = case parseNucleotide h of
 
 -- <operation> ::= "concat" <operand> <operand>
 parseConcat :: Parser Query
-parseConcat input = 
+parseConcat input =
   case and4 (parseString "concat ") parseOperand (parseChar ' ') parseOperand input of
     Left err -> Left err
     Right ((_, op1, _, op2), remaining) -> Right (Concat op1 op2, remaining)
@@ -147,22 +147,22 @@ parseView input =
   else Left "Expected 'view' for ViewCommand"
 
 and2 :: Parser a -> Parser b -> Parser (a, b)
-and2 p1 p2 input = 
+and2 p1 p2 input =
   case p1 input of
     Left err -> Left err
-    Right (result1, rest) -> 
+    Right (result1, rest) ->
       case p2 rest of
         Left err -> Left err
         Right (result2, remaining) -> Right ((result1, result2), remaining)
 
 and3 :: Parser a -> Parser b -> Parser c -> Parser (a, b, c)
-and3 p1 p2 p3 input = 
+and3 p1 p2 p3 input =
   case p1 input of
     Left err -> Left err
-    Right (result1, rest1) -> 
+    Right (result1, rest1) ->
       case p2 rest1 of
         Left err -> Left err
-        Right (result2, rest2) -> 
+        Right (result2, rest2) ->
           case p3 rest2 of
             Left err -> Left err
             Right (result3, remaining) -> Right ((result1, result2, result3), remaining)
@@ -183,13 +183,13 @@ and4 p1 p2 p3 p4 input =
                 Right (result4, remaining) -> Right ((result1, result2, result3, result4), remaining)
 
 or2 :: Parser a -> Parser a -> Parser a
-or2 p1 p2 input = 
+or2 p1 p2 input =
   case p1 input of
     Right result -> Right result
     Left _ -> p2 input
 
 or3 :: Parser a -> Parser a -> Parser a -> Parser a
-or3 p1 p2 p3 input = 
+or3 p1 p2 p3 input =
   case p1 input of
     Right result -> Right result
     Left _ -> case p2 input of
@@ -230,7 +230,7 @@ or8 p1 p2 p3 p4 p5 p6 p7 p8 input =
 
 
 parseQuery :: String -> Either String Query
-parseQuery input = 
+parseQuery input =
   case parseAnyQuery input of
     Right (query, _) -> Right query
     Left _ -> Left "Error: command doesn't match anything from query."
@@ -238,47 +238,38 @@ parseQuery input =
 -- parses regular and parenthesized queries
 parseAnyQuery :: Parser Query
 parseAnyQuery ('(':rest) = parseParenthesizedQuery ('(':rest)
-parseAnyQuery input = 
+parseAnyQuery input =
   or8 parseConcat parseFMotif parseComplement parseTranscribe parseMutate parseView parseCreateSeq parseDeleteSeq input
 
 parseParenthesizedQuery :: Parser Query
 parseParenthesizedQuery input = 
-  case parseChar '(' input of
+  case and3 (parseChar '(') parseAnyQuery (parseChar ')') input of
     Left err -> Left err
-    Right (_, rest1) -> case parseAnyQuery rest1 of
-      Left err -> Left err
-      Right (query, rest2) -> case parseChar ')' rest2 of
-        Left err -> Left err
-        Right (_, remaining) -> Right (query, remaining)
+    Right ((_, query, _), remaining) -> Right (query, remaining)
 
 parseOperand :: Parser Operand
-parseOperand ('(':rest) = 
+parseOperand ('(':rest) =
   case parseParenthesizedQuery ('(':rest) of
     Left err -> Left err
     Right (query, rest) -> Right (NestedQuery query, rest)
-parseOperand input = 
-  case parseNucSeq input of
-    Right ([], rest) -> -- If no nucleotides were parsed, try parsing as a name
-      case parseAlphaNumString input of
-        Left err -> Left err
-        Right (name, remaining) -> Right (NamedSequence name, remaining)
-    Right (nucleotides, rest) -> Right (Sequence nucleotides, rest)
-    Left _ -> -- If nucleotide parsing fails, try parsing as a name
-      case parseAlphaNumString input of
-        Left err -> Left err
-        Right (name, remaining) -> Right (NamedSequence name, remaining)
+parseOperand input =
+  or2
+    parseNucleotideOperand
+    parseNamedOperand
+    input
 
 parseNamedOperand :: Parser Operand
-parseNamedOperand input = 
-  case parseAlphaNumString input of
-    Left err -> Left err
-    Right (name, rest) -> Right (NamedSequence name, rest)
+parseNamedOperand input =
+    case parseAlphaNumString input of
+      Left err -> Left err
+      Right (name, remaining) -> Right (NamedSequence name, remaining)
 
 parseNucleotideOperand :: Parser Operand
 parseNucleotideOperand input =
-  case parseNucSeq input of
-    Left err -> Left err
-    Right (nucleotides, rest) -> Right (Sequence nucleotides, rest)
+    case parseNucSeq input of
+      Right ([], _) -> Left "Empty nucleotide sequence"  -- Force it to try the name parser
+      Right (nucleotides, rest) -> Right (Sequence nucleotides, rest)
+      Left err -> Left err
 
 -- New helper to parse alphanumeric strings (for sequence names)
 parseAlphaNumString :: Parser String
@@ -398,7 +389,7 @@ stateTransition state query = case query of
     let newNamedSequences = (name, sequence) : namedSequences state
         newState = state { namedSequences = newNamedSequences, commandHistory = commandHistory state ++ [query] }
     in Right (Just ("Sequence " ++ name ++ " created."), newState)
-  
+
   DeleteSeq name ->
     let
     removeSequence [] = []
@@ -418,12 +409,12 @@ stateTransition state query = case query of
        in Right (Just ("Sequence " ++ name ++ " deleted."), newState)
 
 
-  
+
 
 -- Helper function to extract sequences from operands
 extractSequence :: State -> Operand -> Either String [Nucleotide]
 extractSequence _ (Sequence s) = Right s
-extractSequence state (NestedQuery nestedQuery) = 
+extractSequence state (NestedQuery nestedQuery) =
   case stateTransition state nestedQuery of
     Left err -> Left err
     Right (_, newState) -> Right (nucleotideSequence newState)
