@@ -38,6 +38,8 @@ parseChar c (h:t)
   | c == h    = Right (c, t)
   | otherwise = Left ("|" ++ [c] ++ "| is not the first element of " ++ (h:t))
 
+
+-- <string> ::= <character> <string> | <character>
 parseString :: String -> Parser String
 parseString [] input = Right ([], input)
 parseString (h:t) input =
@@ -77,6 +79,7 @@ parseNucleotide 'C' = Right C
 parseNucleotide 'G' = Right G
 parseNucleotide _   = Left "Error: invalid nucleotide."
 
+-- <sequence> ::= <nucleotide> | <nucleotide> <sequence>
 parseNucSeq :: Parser [Nucleotide]
 parseNucSeq [] = Right ([], [])
 parseNucSeq (h:t) = case parseNucleotide h of
@@ -228,7 +231,7 @@ or8 p1 p2 p3 p4 p5 p6 p7 p8 input =
                 Right result -> Right result
                 Left _ -> p8 input
 
-
+-- <operand> ::= <sequence> | <operation> | <namedsequence>
 parseQuery :: String -> Either String Query
 parseQuery input =
   case parseAnyQuery input of
@@ -426,13 +429,6 @@ extractSequence state (NamedSequence name) =
 concatSequences :: [Nucleotide] -> [Nucleotide] -> [Nucleotide]
 concatSequences seq1 seq2 = seq1 ++ seq2
 
-containsMotif :: String -> String -> Bool
-containsMotif [] _ = False
-containsMotif seq1 seq2 =
-  if startsWith seq1 seq2
-  then True
-  else containsMotif (tail seq1) seq2
-
 complementSequence :: String -> Either String String
 complementSequence [] = Right []
 complementSequence (h:t) =
@@ -485,10 +481,3 @@ startsWith :: String -> String -> Bool
 startsWith [] _ = False
 startsWith _ [] = True
 startsWith (x:xs) (y:ys) = (x == y) && startsWith xs ys
-
-printMotifLocation :: String -> String -> IO Int
-printMotifLocation seq1 motif = do
-    let index = fmotif seq1 motif
-    if index == 0
-        then putStrLn "Motif not found." >> return 0
-        else putStrLn ("Motif found at index: " ++ show index) >> return index
