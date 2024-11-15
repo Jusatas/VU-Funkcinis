@@ -13,6 +13,7 @@ import Control.Concurrent ( Chan )
 import Control.Concurrent.STM(STM, TVar)
 import qualified Lib2
 
+
 data StorageOp = Save String (Chan ()) | Load (Chan String)
 -- | This function is started from main
 -- in a dedicated thread. It must be used to control
