@@ -33,6 +33,10 @@ genetic code. This REPL program helps with such tasks.
 - **DeleteSeq**: Allows the user to create named sequences for use later.\
   Example: `deleteseq mySeq1`
 
+- **SaveTo**: Allows the user to store the result of commands that are performed in a sequence.\
+  Example: `saveTo mySeq1 concat (complement GGG) AT` 
+  would result in a new sequence named mySeq1 that hols CCCAT
+
 ## Combining Commands
 
 Commands can be combined to perform more complex operations.\
