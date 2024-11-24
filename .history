@@ -1,3 +1,33 @@
+view
+concat bigOne A
+view
+saveTo bigOne concat (complement GGG) (mutate AA 50)
+saveTo bigOne concat ((complement GGG) (mutate AA 50))
+view
+saveTo seq mutate C 20
+saveTo seq mutate C
+saveTo a
+saveTo tes
+saveTo test2 
+saveTo test2 concat a
+saveTo test2 concat
+view
+saveTo test2 concat testing1 seq
+saveto test2 concat testing1 seq
+view
+saveTo testing1 complement (mutate AG 30)
+view
+complement (mutate AG 30)
+view
+mutate (complement (fmotif A (concat T (complement G)))) 15
+view
+saveTo testing mutate (complement (fmotif A (concat T (complement G)))) 15
+view
+saveTo seq concat C G
+saveTo seq concat C T
+saveTo seq (concat CG G)
+saveTo seq concat CG G
+saveTo seq1 concat CG T
 fmotif CGC GC
 fmotif GGGGGTATACC GTATAC
 fmotif GGGGGTATACC TATAC
@@ -68,33 +98,3 @@ createSeq GGCT justasaas
 view
 createSeq GGCT justas
 view
-deleteSeq nobas
-delete
-deleteseq nobas
-view
-createSeq CTG nobas
-createSeq CCCGGaTG jusaaatas
-createSeq CCCGGTG justas
-view
-concat CCGT T
-view
-concat CCGT T
-view
-view
-deleteSeq justas
-view
-deleteSeq justas
-view
-delete justas
-view
-createSeq AGGTTTAGAGACCCGTTUUUU justas
-view
-view
-complement (mutate AG 30)
-view
-complement (mutate AG 30)
-"complement (mutate AG 30)
-view
-createSeq GGCT seq1
-createSeq GGXT c
-createSeq GGXT seq1

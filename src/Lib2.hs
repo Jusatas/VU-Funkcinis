@@ -17,6 +17,7 @@ data Query = Concat Operand Operand
            | ViewCommand
            | CreateSeq [Nucleotide] String
            | DeleteSeq String
+           | SaveTo String Query
            deriving (Show, Eq)
 
 
@@ -137,6 +138,22 @@ parseCreateSeq input =
     Left err -> Left err
     Right ((_, nucleotideSeq, _, name), remaining) -> Right (CreateSeq nucleotideSeq name, remaining)
 
+parseSaveTo :: Parser Query
+parseSaveTo input = 
+  case parseString "saveTo " input of
+    Left err -> Left err
+    Right (_, rest1) -> 
+      case parseAlphaNumString rest1 of
+        Left err -> Left err
+        Right (name, rest2) ->
+          case parseChar ' ' rest2 of
+            Left err -> Left err
+            Right (_, rest3) -> 
+              case parseAnyQuery rest3 of  -- Use parseAnyQuery which handles both parenthesized and regular queries
+                Left err -> Left $ "Failed to parse query in saveTo: " ++ err
+                Right (query, remaining) -> Right (SaveTo name query, remaining)
+
+
 parseName :: Parser String
 parseName "" = Left "Error: Missing name."
 parseName input = Right (input, "")
@@ -231,18 +248,27 @@ or8 p1 p2 p3 p4 p5 p6 p7 p8 input =
                 Right result -> Right result
                 Left _ -> p8 input
 
+or9 :: Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a -> Parser a
+or9 p1 p2 p3 p4 p5 p6 p7 p8 p9 input =
+  case or8 p1 p2 p3 p4 p5 p6 p7 p8 input of
+    Right result -> Right result
+    Left _ -> p9 input
+
 -- <operand> ::= <sequence> | <operation> | <namedsequence>
 parseQuery :: String -> Either String Query
-parseQuery input =
+parseQuery input = 
   case parseAnyQuery input of
-    Right (query, _) -> Right query
-    Left _ -> Left "Error: command doesn't match anything from query."
+    Right (query, remaining) -> 
+      if null remaining 
+      then Right query 
+      else Left $ "Error: unexpected trailing input: " ++ remaining
+    Left err -> Left err
 
 -- parses regular and parenthesized queries
 parseAnyQuery :: Parser Query
 parseAnyQuery ('(':rest) = parseParenthesizedQuery ('(':rest)
-parseAnyQuery input =
-  or8 parseConcat parseFMotif parseComplement parseTranscribe parseMutate parseView parseCreateSeq parseDeleteSeq input
+parseAnyQuery input = 
+  or9 parseSaveTo parseConcat parseFMotif parseComplement parseTranscribe parseMutate parseView parseCreateSeq parseDeleteSeq input
 
 parseParenthesizedQuery :: Parser Query
 parseParenthesizedQuery input = 
@@ -284,7 +310,7 @@ parseAlphaNumString input = parseAlphaNum [] input
       | null acc = Left "Error: Invalid sequence name"
       | otherwise = Right (acc, c:cs)
     parseAlphaNum acc [] = Right (acc, [])
-
+    
     isAlphaNum c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 
 data State = State {
@@ -299,7 +325,6 @@ emptyState = State
     commandHistory = [],
     namedSequences = []
   }
-
 
 viewState :: State -> String
 viewState state =
@@ -338,6 +363,18 @@ nucleotidesToString = map nucleotideToChar
 
 stateTransition :: State -> Query -> Either String (Maybe String, State)
 stateTransition state query = case query of
+  
+  SaveTo name subQuery -> 
+    case stateTransition state subQuery of
+      Left err -> Left err
+      Right (_, newState) -> 
+        let newNamedSequences = (name, nucleotideSequence newState) : namedSequences state
+            finalState = state { 
+              namedSequences = newNamedSequences, 
+              commandHistory = commandHistory state ++ [query] 
+            }
+        in Right (Just ("Sequence saved as " ++ name ++ "."), finalState)
+
   Concat op1 op2 ->
     case (extractSequence state op1, extractSequence state op2) of
       (Right s1, Right s2) ->
