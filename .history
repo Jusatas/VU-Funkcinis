@@ -1,3 +1,6 @@
+view
+createSeq CGTG myseq1
+createSeq myseq1 CG
 parseCommand "concat CG G"
 parseStatements "concat CG G"
 parseStatements "concat CG G"
@@ -95,6 +98,3 @@ deleteSeq justas
 deleteSeq justas
 deleteSeq justas
 view
-deleteSeq justas
-view
-createSeq GGCTA justas
