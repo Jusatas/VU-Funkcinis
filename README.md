@@ -42,6 +42,11 @@ genetic code. This REPL program helps with such tasks.
 Commands can be combined to perform more complex operations.\
 Example: `fmotif (concat ATCG GCTA) TCG` finds the motif TCG in ATCGGCTA.
 
+## Saving State
+
+Performed commands and saved sequences can be saved into a file and loaded from a file using
+`save` and `load`
+
 <br><br>
  ## BNF
 ```bnf
