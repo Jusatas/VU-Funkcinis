@@ -1,3 +1,10 @@
+parseCommand "concat CG G"
+parseStatements "concat CG G"
+parseStatements "concat CG G"
+parseStatements "concat CG G"
+parseStatements "concat CG G"
+parseStatements "concat CG G"
+parseStatements "query1"
 view
 concat bigOne A
 view
@@ -91,10 +98,3 @@ view
 deleteSeq justas
 view
 createSeq GGCTA justas
-view
-createSeq GGCT justas
-view
-createSeq GGCT justasaas
-view
-createSeq GGCT justas
-view

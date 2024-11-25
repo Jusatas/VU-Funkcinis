@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+
 module Lib2
     ( Query(..)
     , Operand(..)

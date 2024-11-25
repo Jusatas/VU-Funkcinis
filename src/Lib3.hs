@@ -12,6 +12,7 @@ module Lib3
 import Control.Concurrent ( Chan )
 import Control.Concurrent.STM(STM, TVar)
 import qualified Lib2
+import Debug.Trace (trace)
 
 
 data StorageOp = Save String (Chan ()) | Load (Chan String)
@@ -36,14 +37,81 @@ data Command = StatementCommand Statements |
 
 -- | Parses user's input.
 parseCommand :: String -> Either String (Command, String)
-parseCommand _ = Left "Not implemented 2"
+parseCommand input = case words input of
+    ("load":rest) -> Right (LoadCommand, unwords rest) -- Matches "load" command
+    ("save":rest) -> Right (SaveCommand, unwords rest) -- Matches "save" command
+    _ -> case parseStatements input of -- Delegates to `parseStatements` for other cases
+           Right (stmts, rest) -> Right (StatementCommand stmts, rest)
+           Left err -> Left err
+
+-- >>> parseCommand "save output.txt"
+-- Right (SaveCommand,"output.txt")
+
+-- >>> parseCommand "concat CG G"
+-- Right (StatementCommand (Single (Concat (Sequence [C,G]) (Sequence [G]))),"")
+
+-- >>> parseCommand "BEGIN concat CG G; complement G; mutate CCCGGAGAT 75; END"
+-- Right (StatementCommand (Batch [Concat (Sequence [C,G]) (Sequence [G]),Complement (Sequence [G]),Mutate (Sequence [C,C,C,G,G,A,G,A,T]) 75]),"")
+
 
 -- | Parses Statement.
--- Must be used in parseCommand.
--- Reuse Lib2 as much as you can.
--- You can change Lib2.parseQuery signature if needed.
 parseStatements :: String -> Either String (Statements, String)
-parseStatements _ = Left "Not implemented 3"
+parseStatements input
+    | take 5 input == "BEGIN" = parseBatch (drop 5 input)
+    | otherwise =
+        let trimmedInput = dropWhile isWhitespace input
+        in case trace ("Calling Lib2.parseQuery with: " ++ show trimmedInput) Lib2.parseQuery trimmedInput of
+            Right query -> Right (Single query, "")
+            Left err -> Left err
+
+parseBatch :: String -> Either String (Statements, String)
+parseBatch inp = case parseQueries [] (dropWhile isWhitespace inp) of
+    Right (queries, rest) -> Right (Batch queries, rest)
+    Left err -> Left err
+
+parseQueries :: [Lib2.Query] -> String -> Either String ([Lib2.Query], String)
+parseQueries acc input'
+    | take 3 input' == "END" = Right (reverse acc, drop 3 input') -- Stop
+    | otherwise =
+        let (queryStr, rest) = break (== ';') input' -- Split on the semicolon
+        in if null queryStr
+           then Left "Empty query before semicolon"
+           else case Lib2.parseQuery (trim queryStr) of
+               Right query ->
+                   parseQueries (query : acc) (dropWhile isWhitespace (drop 1 rest)) -- Skip semicolon
+               Left err -> Left err
+
+-- Trims whitespace from both ends of a string.
+trim :: String -> String
+trim str =
+    let withoutLeading = dropWhile isWhitespace str
+        withoutTrailing = reverse (dropWhile isWhitespace (reverse withoutLeading))
+    in withoutTrailing
+
+isWhitespace :: Char -> Bool
+isWhitespace c = c `elem` [' ', '\n', '\t', ';']
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 -- | Converts program's state into Statements
 -- (probably a batch, but might be a single query)
