@@ -1,0 +1,7 @@
+BEGIN
+createSeq CCCAGGT current;
+createSeq CCCAG nuVa;
+createSeq AGGTG mySeq1;
+
+complement GG;
+END

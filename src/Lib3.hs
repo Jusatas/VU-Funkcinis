@@ -11,10 +11,12 @@ module Lib3
     renderStatements
     ) where
 
-import Control.Concurrent ( Chan )
-import Control.Concurrent.STM(STM, TVar, readTVar, atomically, writeTVar)
+import Control.Concurrent.STM(TVar, readTVar, atomically, writeTVar, readTVarIO)
 import qualified Lib2
 import Debug.Trace (trace)
+import Control.Concurrent.Chan
+import Control.Monad
+import Control.Exception (try, SomeException)
 
 data StorageOp = Save String (Chan ()) | Load (Chan String)
 -- | This function is started from main
@@ -24,8 +26,18 @@ data StorageOp = Save String (Chan ()) | Load (Chan String)
 -- to a channel provided in a request.
 -- Modify as needed.
 storageOpLoop :: Chan StorageOp -> IO ()
-storageOpLoop _ = do
-  return $ error "Not implemented 1"
+storageOpLoop opChan = forever $ do
+  op <- readChan opChan
+  case op of
+    Save s chan -> do
+      writeFile "state.txt" s
+      writeChan chan ()
+
+    Load chan -> do
+      result <- try (readFile "state.txt") :: IO (Either SomeException String)
+      case result of
+        Right s' -> writeChan chan s'
+        Left _   -> writeChan chan ""
 
 data Statements = Batch [Lib2.Query] |
                Single Lib2.Query
@@ -61,7 +73,8 @@ parseStatements input
     | take 5 input == "BEGIN" = parseBatch (drop 5 input)
     | otherwise =
         let trimmedInput = dropWhile isWhitespace input
-        in case trace ("Calling Lib2.parseQuery with: " ++ show trimmedInput) Lib2.parseQuery trimmedInput of
+        -- in case trace ("Calling Lib2.parseQuery with: " ++ show trimmedInput) Lib2.parseQuery trimmedInput of
+        in case Lib2.parseQuery trimmedInput of
             Right query -> Right (Single query, "")
             Left err -> Left err
 
@@ -92,14 +105,6 @@ trim str =
 isWhitespace :: Char -> Bool
 isWhitespace c = c `elem` [' ', '\n', '\t', ';']
 
-
-
-
-
-
-
-
-
 -- | Converts program's state into Statements
 -- (probably a batch, but might be a single query)
 marshallState :: Lib2.State -> Statements
@@ -107,12 +112,12 @@ marshallState state = Batch queries
   where
     currentSeqQuery = if null (Lib2.nucleotideSequence state)
                      then []
-                     else [Lib2.CreateSeq (Lib2.nucleotideSequence state) "current"]
-    
+                     else [Lib2.CreateSeq (Lib2.nucleotideSequence state) "last"]
+
     -- Create queries for all named sequences
-    namedSeqQueries = map (\(name, seq) -> Lib2.CreateSeq seq name) 
+    namedSeqQueries = map (\(name, seq) -> Lib2.CreateSeq seq name)
                          (Lib2.namedSequences state)
-    
+
     -- Combine all queries
     queries = currentSeqQuery ++ namedSeqQueries
 
@@ -124,26 +129,26 @@ marshallState state = Batch queries
 -- for all s: parseStatements (renderStatements s) == Right(s, "")
 renderStatements :: Statements -> String
 renderStatements (Single q) = renderQuery q
-renderStatements (Batch qs) = "BEGIN\n" ++ 
-                             concatMap (\q -> renderQuery q ++ ";\n") qs ++ 
+renderStatements (Batch qs) = "BEGIN\n" ++
+                             concatMap (\q -> renderQuery q ++ ";\n") qs ++
                              "END\n"
 
 renderQuery :: Lib2.Query -> String
-renderQuery (Lib2.CreateSeq nucleotides name) = 
+renderQuery (Lib2.CreateSeq nucleotides name) =
     "createSeq " ++ nucleotidesToString nucleotides ++ " " ++ name
-renderQuery (Lib2.SaveTo name query) = 
+renderQuery (Lib2.SaveTo name query) =
     "saveTo " ++ name ++ " " ++ renderQuery query
-renderQuery (Lib2.Concat op1 op2) = 
+renderQuery (Lib2.Concat op1 op2) =
     "concat " ++ renderOperand op1 ++ " " ++ renderOperand op2
-renderQuery (Lib2.Complement op) = 
+renderQuery (Lib2.Complement op) =
     "complement " ++ renderOperand op
-renderQuery (Lib2.Transcribe op) = 
+renderQuery (Lib2.Transcribe op) =
     "transcribe " ++ renderOperand op
-renderQuery (Lib2.Mutate op n) = 
+renderQuery (Lib2.Mutate op n) =
     "mutate " ++ renderOperand op ++ " " ++ show n
 renderQuery Lib2.ViewCommand = "view"
 renderQuery (Lib2.DeleteSeq name) = "deleteSeq " ++ name
-renderQuery (Lib2.FMotif op1 op2) = 
+renderQuery (Lib2.FMotif op1 op2) =
     "fmotif " ++ renderOperand op1 ++ " " ++ renderOperand op2
 
 renderOperand :: Lib2.Operand -> String
@@ -193,9 +198,27 @@ nucleotidesToString = map nucleotideToChar
 -- is stored in transactinal variable
 stateTransition :: TVar Lib2.State -> Command -> Chan StorageOp ->
                    IO (Either String (Maybe String))
-stateTransition stateVar command _ = case command of
-    LoadCommand -> return $ Left "Load not implemented yet"
-    SaveCommand -> return $ Left "Save not implemented yet"
+stateTransition stateVar command storageChan = case command of
+    LoadCommand -> do
+        responseChan <- newChan
+        writeChan storageChan (Load responseChan)
+        content <- readChan responseChan
+        case parseStatements content of
+            Right (stmts, _) -> atomically $ do
+                state <- readTVar stateVar
+                case executeStatements state stmts of
+                    Right (_, newState) -> do
+                        writeTVar stateVar newState
+                        return $ Right (Just "State loaded successfully.")
+                    Left err -> return $ Left err
+            Left err -> return $ Left ("Failed to parse saved state: " ++ err)
+    SaveCommand -> do
+        state <- readTVarIO stateVar
+        let renderedState = renderStatements (marshallState state)
+        responseChan <- newChan
+        writeChan storageChan (Save renderedState responseChan)
+        _ <- readChan responseChan
+        return $ Right (Just "State saved successfully.")
     StatementCommand stmts -> atomically $ do
         state <- readTVar stateVar
         case executeStatements state stmts of
@@ -204,9 +227,10 @@ stateTransition stateVar command _ = case command of
                 return $ Right msg
             Left err -> return $ Left err
 
+
 executeStatements :: Lib2.State -> Statements -> Either String (Maybe String, Lib2.State)
 executeStatements state (Single query) = Lib2.stateTransition state query
-executeStatements state (Batch queries) = 
+executeStatements state (Batch queries) =
     foldr combineBatchResults (Right (Nothing, state)) queries
   where
     combineBatchResults query acc = case acc of
@@ -215,10 +239,10 @@ executeStatements state (Batch queries) =
             Left err -> Left err
             Right (msg, newState) -> Right (msg, newState)
 
-        
+
 -- >>> marshallState Lib2.emptyState
 -- Batch []
 
 -- >>> let testState = Lib2.emptyState { Lib2.nucleotideSequence = [Lib2.A, Lib2.T, Lib2.C], Lib2.namedSequences = [("test1", [Lib2.G, Lib2.C]), ("test2", [Lib2.A, Lib2.A])]}
 -- >>> marshallState testState
--- Batch [CreateSeq [A,T,C] "current",CreateSeq [G,C] "test1",CreateSeq [A,A] "test2"]
+-- Batch [CreateSeq [A,T,C] "last",CreateSeq [G,C] "test1",CreateSeq [A,A] "test2"]
