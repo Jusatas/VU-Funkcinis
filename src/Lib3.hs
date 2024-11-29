@@ -1,4 +1,4 @@
-{-# LANGUAGE InstanceSigs #-}
+
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use list comprehension" #-}
 module Lib3
@@ -8,7 +8,8 @@ module Lib3
     parseCommand,
     parseStatements,
     marshallState,
-    renderStatements
+    renderStatements,
+    Statements(..)
     ) where
 
 import Control.Concurrent.STM(TVar, readTVar, atomically, writeTVar, readTVarIO)
@@ -67,6 +68,7 @@ parseCommand input = case words input of
 -- Right (StatementCommand (Batch [Concat (Sequence [C,G]) (Sequence [G]),Complement (Sequence [G]),Mutate (Sequence [C,C,C,G,G,A,G,A,T]) 75]),"")
 
 
+
 -- | Parses Statement.
 parseStatements :: String -> Either String (Statements, String)
 parseStatements input
@@ -85,14 +87,15 @@ parseBatch inp = case parseQueries [] (dropWhile isWhitespace inp) of
 
 parseQueries :: [Lib2.Query] -> String -> Either String ([Lib2.Query], String)
 parseQueries acc input'
-    | take 3 input' == "END" = Right (reverse acc, drop 3 input') -- Stop
+    | take 3 (dropWhile isWhitespace input') == "END" = 
+        Right (reverse acc, dropWhile isWhitespace (drop 3 (dropWhile isWhitespace input')))
     | otherwise =
-        let (queryStr, rest) = break (== ';') input' -- Split on the semicolon
+        let (queryStr, rest) = break (== ';') input' 
         in if null queryStr
            then Left "Empty query before semicolon"
            else case Lib2.parseQuery (trim queryStr) of
                Right query ->
-                   parseQueries (query : acc) (dropWhile isWhitespace (drop 1 rest)) -- Skip semicolon
+                   parseQueries (query : acc) (dropWhile isWhitespace (drop 1 rest))
                Left err -> Left err
 
 -- Trims whitespace from both ends of a string.
@@ -235,10 +238,14 @@ executeStatements state (Batch queries) =
   where
     combineBatchResults query acc = case acc of
         Left err -> Left err
-        Right (_, curState) -> case Lib2.stateTransition curState query of
+        Right (prevMsg, curState) -> case Lib2.stateTransition curState query of
             Left err -> Left err
-            Right (msg, newState) -> Right (msg, newState)
-
+            Right (msg, newState) -> Right (combineMsgs prevMsg msg, newState)
+    
+    combineMsgs Nothing Nothing = Nothing
+    combineMsgs (Just m1) Nothing = Just m1
+    combineMsgs Nothing (Just m2) = Just m2
+    combineMsgs (Just m1) (Just m2) = Just (m1 ++ "\n" ++ m2)
 
 -- >>> marshallState Lib2.emptyState
 -- Batch []

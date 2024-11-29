@@ -1,3 +1,46 @@
+view
+END
+view;
+mutate TATATATGGG 75;
+concat GT G;
+BEGIN
+:paste
+END
+mutate TTATATG 75
+concat GT T
+:paste
+concat GGG
+BEGIN
+:paste
+con
+BEGIND
+:paste
+view
+END
+view;
+concat GG A;
+complement AAAAAAA;
+BEGIN
+:paste
+view
+BEGIN concat CG G; complement G; mutate CCCGGAGAT 75; END
+:paste
+view
+BEGIN concat CG G; complement G; mutate CCCGGAGAT 75; END
+concat CGT T
+END
+complement GT;
+concat CG G;
+BEGIN
+:paste
+view
+concat G T
+cconcat G T
+BEGIN concat G T END
+BEGIN concat G T END
+:paste
+concat G T
+:paste
 END
     complement last;
     mutate last 5;
@@ -55,46 +98,3 @@ BEGIN
 :paste
 concat GG A;
 concat CGT T;
-:paste
-transcribe A;
-complement G;
-concat GGT G;
-:paste
-concat GGT G; complement G; transcribe A;
-:paste
-view
-deleteSeq fs;
-createSeq TTT fs;
-:paste
-createSeq TTTTTT fs
-:paste
-deleteSeq tr\ndeleteSeq tr
-deleteSeq tr
-view
-deleteSeq tr
-createSeq CA tr
-:paste
-view
-load
-view
-view
-view
-:paste
-view
-createSeq ATATATAATATATGGGGGGGGGGGGGGGG labas
-concat G T
-:paste
-createSeq CACA testingCreate;
-:paste
-END
-createSeq CACAC testingcreate;
-BEGIN
-:paste
-END
-createSeq CACAC testingcreate
-BEGIN
-:paste
-END
-createSeq GAGA testingcreate
-concat AAAA T
-BEGIN
