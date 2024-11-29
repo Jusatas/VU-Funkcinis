@@ -52,9 +52,9 @@ data Command = StatementCommand Statements |
 -- | Parses user's input.
 parseCommand :: String -> Either String (Command, String)
 parseCommand input = case words input of
-    ("load":rest) -> Right (LoadCommand, unwords rest) -- Matches "load" command
-    ("save":rest) -> Right (SaveCommand, unwords rest) -- Matches "save" command
-    _ -> case parseStatements input of -- Delegates to `parseStatements` for other cases
+    ("load":rest) -> Right (LoadCommand, unwords rest)
+    ("save":rest) -> Right (SaveCommand, unwords rest)
+    _ -> case parseStatements input of
            Right (stmts, rest) -> Right (StatementCommand stmts, rest)
            Left err -> Left err
 
