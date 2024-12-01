@@ -1,0 +1,76 @@
+PS D:\ProgramuSistemos\Funkcinis\fp-2024> stack run fp2024-three
+Welcome! Press [TAB] for auto completion, type ':paste' for multiline input
+>>> saveTo seq1 (complement (concat GGGT (mutate CCCC 50)))
+Sequence saved as seq1.
+>>> concat seq1 seq1
+Sequences concatenated.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence: CCCACCGGCCCACCGG
+
+Saved Sequences:
+seq1: CCCACCGG
+
+
+
+Command History:
+SaveTo "seq1" (Complement (NestedQuery (Concat (Sequence [G,G,G,T]) (NestedQuery (Mutate (Sequence [C,C,C,C]) 50)))))
+Concat (NamedSequence "seq1") (NamedSequence "seq1")
+------------------------------------------------------------------
+
+>>> :paste
+-- Entering multi-line mode. Press <Ctrl-D> to finish.
+| BEGIN 
+| createSeq AUG seq2;
+| mutate GGGAGCCG 75;
+| END
+|     
+Sequence mutated.     
+Sequence seq2 created.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence: CCCTCGCG
+
+Saved Sequences:
+seq2: AUG
+seq1: CCCACCGG
+
+
+
+Command History:
+SaveTo "seq1" (Complement (NestedQuery (Concat (Sequence [G,G,G,T]) (NestedQuery (Mutate (Sequence [C,C,C,C]) 50)))))
+Mutate (Sequence [G,G,G,A,G,C,C,G]) 75
+CreateSeq [A,U,G] "seq2"
+------------------------------------------------------------------
+
+>>> save
+State saved successfully.
+
+>>>
+Goodbye!
+PS D:\ProgramuSistemos\Funkcinis\fp-2024> stack run fp2024-three
+Welcome! Press [TAB] for auto completion, type ':paste' for multiline input
+>>> load
+State loaded successfully.
+>>> view
+
+Current State:
+------------------------------------------------------------------
+Nucleotide Sequence:
+
+Saved Sequences:
+last: CCCTCGCG
+seq2: AUG
+seq1: CCCACCGG
+
+
+
+Command History:
+CreateSeq [C,C,C,A,C,C,G,G] "seq1"
+CreateSeq [A,U,G] "seq2"
+CreateSeq [C,C,C,T,C,G,C,G] "last"
+------------------------------------------------------------------
