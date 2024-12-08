@@ -1,7 +1,5 @@
 BEGIN
-createSeq CCCAGGT current;
-createSeq CCCAG nuVa;
-createSeq AGGTG mySeq1;
-
-complement GG;
+createSeq CCCTCGCG last;
+createSeq AUG seq2;
+createSeq CCCACCGG seq1;
 END

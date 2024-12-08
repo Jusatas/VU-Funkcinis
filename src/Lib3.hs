@@ -18,6 +18,7 @@ import Debug.Trace (trace)
 import Control.Concurrent.Chan
 import Control.Monad
 import Control.Exception (try, SomeException)
+import Data.List
 
 data StorageOp = Save String (Chan ()) | Load (Chan String)
 -- | This function is started from main
@@ -74,39 +75,40 @@ parseStatements :: String -> Either String (Statements, String)
 parseStatements input
     | take 5 input == "BEGIN" = parseBatch (drop 5 input)
     | otherwise =
-        let trimmedInput = dropWhile isWhitespace input
+        let trimmedInput = trim input
         -- in case trace ("Calling Lib2.parseQuery with: " ++ show trimmedInput) Lib2.parseQuery trimmedInput of
         in case Lib2.parseQuery trimmedInput of
             Right query -> Right (Single query, "")
             Left err -> Left err
 
 parseBatch :: String -> Either String (Statements, String)
-parseBatch inp = case parseQueries [] (dropWhile isWhitespace inp) of
-    Right (queries, rest) -> Right (Batch queries, rest)
-    Left err -> Left err
+parseBatch input = 
+    let trimmedInp = trim input
+    in case parseQueries [] trimmedInp of
+        Right (queries, rest) -> Right (Batch queries, trim rest)
+        Left err -> Left err
 
 parseQueries :: [Lib2.Query] -> String -> Either String ([Lib2.Query], String)
 parseQueries acc input'
-    | take 3 (dropWhile isWhitespace input') == "END" = 
-        Right (reverse acc, dropWhile isWhitespace (drop 3 (dropWhile isWhitespace input')))
+    | take 3 (trim input') == "END" = 
+        Right (reverse acc, trim (drop 3 input'))
     | otherwise =
         let (queryStr, rest) = break (== ';') input' 
-        in if null queryStr
-           then Left "Empty query before semicolon"
-           else case Lib2.parseQuery (trim queryStr) of
-               Right query ->
-                   parseQueries (query : acc) (dropWhile isWhitespace (drop 1 rest))
-               Left err -> Left err
+        in case Lib2.parseQuery (trim queryStr) of
+            Right query ->
+                let remainingInput = trim (drop 1 rest)
+                in if null queryStr
+                   then Left "Empty query before semicolon"
+                   else parseQueries (query : acc) remainingInput
+            Left err -> Left err
 
 -- Trims whitespace from both ends of a string.
 trim :: String -> String
-trim str =
-    let withoutLeading = dropWhile isWhitespace str
-        withoutTrailing = reverse (dropWhile isWhitespace (reverse withoutLeading))
-    in withoutTrailing
+trim input = dropWhileEnd isSpace (dropWhile isSpace input)
 
-isWhitespace :: Char -> Bool
-isWhitespace c = c `elem` [' ', '\n', '\t', ';']
+
+isSpace :: Char -> Bool
+isSpace c = c `elem` [' ', '\n', '\t']
 
 -- | Converts program's state into Statements
 -- (probably a batch, but might be a single query)

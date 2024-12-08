@@ -1,4 +1,73 @@
 view
+createSeq AAAA test;
+END
+concat test test;
+createSeq AAAA test;
+BEGIN
+:paste
+view
+BEGIN concat GT G; complement GGGG; END
+:paste
+END
+transcribe AAGUT
+concat GT G;
+BEGIN
+:paste
+view
+transcribe AAUCGT
+view
+transcribe GGCTAUCATG
+view
+transcribe AUG
+view
+saveTo seq2 complement G
+saveTo seq1 transcribe AUG
+view
+complement AUG
+view
+END
+mutate AAAAAAA 75;
+concat GGT G;
+BEGIN
+:paste
+view
+load
+view
+load
+save
+view
+END
+mutate GGGAGCCG 75;
+createSeq AUG seq2;
+BEGIN
+:paste
+view
+concat seq1 seq1
+saveTo seq1 (complement (concat GGGT (mutate CCCC 50)))
+view
+load
+view
+save
+view
+END
+mutate GGGAGCCG 75;
+createSeq AUG seq2;
+BEGIN
+:paste
+view
+concat seq1 seq1
+saveTo seq1 (complement (concat GGGT (mutate CCCC 50)))
+view
+saveTo seq1 (complement (concat GGGT (mutate AAAA 50)))
+createSeq (complement (concat GGGT (mutate AAAA 50))) seq1
+view
+createSeq GT seq1
+createSeq complement (concat GGGT (mutate AAAA 50)) seq1
+createSeq seq1 complement (concat GGGT (mutate AAAA 50))
+createSeq complement (concat GGGT (mutate AAAA 50))
+view
+concat GT T
+view
 END
 view;
 mutate TATATATGGG 75;
@@ -29,72 +98,3 @@ view
 BEGIN concat CG G; complement G; mutate CCCGGAGAT 75; END
 concat CGT T
 END
-complement GT;
-concat CG G;
-BEGIN
-:paste
-view
-concat G T
-cconcat G T
-BEGIN concat G T END
-BEGIN concat G T END
-:paste
-concat G T
-:paste
-END
-    complement last;
-    mutate last 5;
-    concat last testSeq;
-    createSeq GCTA testSeq;
-    createSeq ATGC last;
-BEGIN
-:paste
-            Left err -> Left err
-                else Left "Extra characters after statement"
-                then Right (Single query, "")
-                if null (dropWhile isWhitespace trimmedInput)
-                -- Ensure the rest of the input is consumed
-            Right query -> 
-        in case Lib2.parseQuery trimmedInput of
-        let trimmedInput = dropWhile isWhitespace input
-    | otherwise =
-    | take 5 input == "BEGIN" = parseBatch (drop 5 input)
-parseStatements input
-parseStatements :: String -> Either String (Statements, String)
-:paste
-END
-    complement last;
-    mutate last 5;
-    concat last testSeq;
-    createSeq GCTA testSeq;
-    createSeq ATGC last;
-BEGIN
-:paste
-END
-    complement last;
-    mutate last 5;
-    concat last testSeq;
-    createSeq GCTA testSeq;
-    createSeq ATGC last;
-BEGIN
-:paste
-view
-load
-view
-view
-vview
-view
-vview
-load
-view
-load
-load
-view
-load
-END
-concat CCCC T;
-concat GT A;
-BEGIN
-:paste
-concat GG A;
-concat CGT T;
